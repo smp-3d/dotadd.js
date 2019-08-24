@@ -1,0 +1,19 @@
+{
+  "name": "dotadd.js",
+  "version": "0.0.1",
+  "description": "read dotadd files",
+  "main": "dotadd.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smp-3d/dotadd.js.git"
+  },
+  "author": "Jonas Ohland",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/smp-3d/dotadd.js/issues"
+  },
+  "homepage": "https://github.com/smp-3d/dotadd.js#readme"
+}
