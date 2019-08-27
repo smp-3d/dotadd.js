@@ -1,41 +1,108 @@
+/**
+ * Maximum supported file revision for this library
+ */
 const DOTADD_MAX_REVSION = 0;
 
-
-class DotAdd {
+class ADD {
 
     /**
-     * 
-     * @param {String|Object} dotadd_f The dotadd file either as raw String or as Object. 
+     * Construct a new Ambisonic Decoder Description. Can be constructed from an Object or a String. 
+     * A null parameter constructs an invalid empty ADD.
+     * @param {String|Object} add The ADD either as raw String or as Object. 
      */
-    constructor(dotadd_f){
+    constructor(add) {
 
-        if(dotadd_f instanceof String)
-            dotadd_f = JSON.parse(dotadd_f);
+        if (!(add)) {
+            this.revision = DOTADD_MAX_REVSION;
+            return;
+        }
 
-        Object.assign(this, dotadd_f);
+        if (add instanceof String)
+            add = JSON.parse(add);
 
-        if(!this.valid()) throw new Error("invalid .add file: " + this.invalid_reason);
+        Object.assign(this, add);
+
+        if (!this.valid()) throw new Error("invalid ADD: " + this.invalid_reason);
     }
 
     /**
-     * @returns true if the file is valid
+     * Check if the ADD is valid.
+     * @returns true if the AmbisonicDecoderDescription is valid
      */
     valid(){
 
-        if(!this.name || !this.description || !this.author){
-            this.invalid_reason = "Missing Data";
+        if(!this.name){
+            this.invalid_reason = "Missing Metadata";
             return false;
         }
 
-        this.invalid_reason = "nooo";
-        return false;
+        return true;
+    }
+
+    /**
+     * set the "version" field (optional, default = 1)
+     * @param {Number} v version
+     */
+    setVersion(v){
+        this.version = Math.floor(v);
+        return this;
+    }
+
+    /**
+     * set the creation date (optional)
+     * @param {Date|String} date 
+     */
+    setDate(date){
+        this.date = new Date(date).toISOString();
+        return this;
+    }
+
+    /**
+     * set the "name" field (required)
+     * @param {String} name 
+     */
+    setName(name){
+        this.name = name;
+        return this;
+    }
+
+    /**
+     * set the "description" field (optional)
+     * @param {String} desc 
+     */
+    setDescription(desc){
+        this.description = desc;
+        return this;
+    }
+
+    /**
+     * set the "author" field (optional)
+     * @param {String} author 
+     */
+    setAuthor(author){
+        this.author = author;
+        return this;
     }
 
     /**
      * 
      */
     isRevisionSupported(){
-        return this.revision <= maxRevision();
+        return this.revision <= ADD.maxRevision();
+    }
+
+    export(){
+
+        if(!this.valid())
+            throw new Error("Add in invalid state: " + this.invalid_reason);
+
+        return {
+            name: this.name,
+            author: this.author || "dotadd.js library",
+            description: this.description || "created with the dotadd.js library",
+            date: this.date || new Date(Date.now()).toISOString(),
+            version: this.version || 1
+        }
     }
 
     /**
@@ -46,4 +113,4 @@ class DotAdd {
     }
 }
 
-module.exports = DotAdd;
+module.exports = ADD;
