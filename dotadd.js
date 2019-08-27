@@ -17,8 +17,11 @@ class ADD {
             return;
         }
 
-        if (add instanceof String)
-            add = JSON.parse(add);
+        if (typeof add == "string")
+            Object.assign(this, JSON.parse(add));
+        else
+            Object.assign(this, add);
+
 
         Object.assign(this, add);
 

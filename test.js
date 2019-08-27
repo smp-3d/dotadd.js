@@ -5,19 +5,9 @@ const fs = require('fs');
 
 try {
 
-    let test = new ADD();
-
-    test.setName("test decoder").setAuthor("Jonas Ohland").setDescription("Test description");
+    let test = new ADD(fs.readFileSync('./testoutput.json').toString());
 
     console.log(test.export());
-
-    console.log(test.isRevisionSupported());
-
-    let test2 = new ADD(test.export());
-
-    console.log(test2.export());
-
-    fs.writeFileSync('./testoutput/testoutput.json', test2.export().serialize());
 
 
 } catch(e) {
