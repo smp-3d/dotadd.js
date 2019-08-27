@@ -91,18 +91,29 @@ class ADD {
         return this.revision <= ADD.maxRevision();
     }
 
+    /**
+     * Export the ADD to a serializable javascript Object.
+     */
     export(){
+
+        this.prop = "string";
 
         if(!this.valid())
             throw new Error("Add in invalid state: " + this.invalid_reason);
 
-        return {
+        let exported = {
             name: this.name,
             author: this.author || "dotadd.js library",
             description: this.description || "created with the dotadd.js library",
             date: this.date || new Date(Date.now()).toISOString(),
-            version: this.version || 1
+            version: this.version || 1,
         }
+
+        exported.toString = () => {
+            return JSON.stringify(exported);
+        }
+
+        return exported;
     }
 
     /**
