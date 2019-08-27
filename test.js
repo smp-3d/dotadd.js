@@ -17,7 +17,7 @@ try {
 
     console.log(test2.export());
 
-    fs.writeFileSync('./testoutput/testoutput.json', test2.export().toString());
+    fs.writeFileSync('./testoutput/testoutput.json', test2.export().serialize());
 
 
 } catch(e) {

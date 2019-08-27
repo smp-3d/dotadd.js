@@ -85,14 +85,16 @@ class ADD {
     }
 
     /**
-     * 
+     * Check if the imported files revision is supported by this library version.
+     * @returns {Boolean} true if this library supports the file revision
      */
     isRevisionSupported(){
         return this.revision <= ADD.maxRevision();
     }
 
     /**
-     * Export the ADD to a serializable javascript Object.
+     * Export the ADD to a serializable javascript Object. You can use the exported Objects .serialize() Method to serialize the Object.
+     * @returns {Object} A javscript object that is serializable to a valid .add file (with JSON.stringify() for example)
      */
     export(){
 
@@ -109,7 +111,7 @@ class ADD {
             version: this.version || 1,
         }
 
-        exported.toString = () => {
+        exported.serialize = () => {
             return JSON.stringify(exported);
         }
 
