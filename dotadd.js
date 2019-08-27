@@ -22,9 +22,6 @@ class ADD {
         else
             Object.assign(this, add);
 
-
-        Object.assign(this, add);
-
         if (!this.valid()) throw new Error("invalid ADD: " + this.invalid_reason);
     }
 
