@@ -3,6 +3,30 @@
  */
 const DOTADD_MAX_REVSION = 0;
 
+class Filter {
+
+    constructor(high_freq, low_freq){
+        this.hi = high_freq;
+        this.lo = low_freq;
+    }
+
+    isLowpass(){
+        return this.lo == undefined && this.hi != undefined;
+    }
+
+    isHighpass(){
+        return this.hi == undefined && this.lo != undefined;
+    }
+
+    isBandpass(){
+        return this.hi != undefined && this.lo != undefined;
+    }
+
+    static fromObject(obj){
+        return new Filter(obj.hi, obj.lo);
+    }
+}
+
 /**
  * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field 
  * which specifies the input band it receives audio from
@@ -92,6 +116,10 @@ class Matrix {
         return this.matrix[chan];
     }
 
+    static fromObject(obj){
+        return new Matrix(obj.input, obj.matrix);
+    }
+
 }
 
 class AEDCoord {
@@ -116,6 +144,10 @@ class Receive {
      */
     constructor(mat_or_receive, ch, gain){
 
+        if(mat_or_receive == undefined)
+            return;
+            
+
         if(mat_or_receive instanceof Object){
             this.matrix = mat_or_receive.matrix;
             this.channel = mat_or_receive.channel;
@@ -127,14 +159,28 @@ class Receive {
         }
     }
 
+    /**
+     * Create a default Receive for the given Matrix and Channel.
+     * @param {Number} matrix the Matrix to create a Receive for
+     * @param {Number} channel the channel in the Matrix to create a Receive for
+     */
     static getDefaultReceive(matrix, channel){
         return new Receive(matrix, channel, 1.0);
+    }
+
+    static fromObject(obj){
+        let out = new Receive();
+        Object.assign(out, obj);
+        return out;
     }
 }
 
 class Output {
 
     constructor(name, coord_or_receive, ...receives) {
+
+        if(name == undefined)
+            return;
 
         if (coord_or_receive instanceof Receive) 
             receives.unshift(coord_or_receive);
@@ -158,6 +204,12 @@ class Output {
     addReceive(receive){
         this.receive.push(new Receive(receive));
     }
+
+    static fromObject(obj){
+        let out = new Output();
+        Object.assign(out, obj);
+        return out;
+    }
 }
 
 Output.AEDCoord = AEDCoord;
@@ -179,12 +231,29 @@ class ADD {
         }
 
         if (typeof add == "string")
-            Object.assign(this, JSON.parse(add));
-        else
-            Object.assign(this, add);
+            add = JSON.parse(add);
+        
+        Object.assign(this, add);
 
-        if(!this.decoder)
+        if(add.decoder){
+
             this.decoder = {};
+
+            if(add.decoder.filter){
+                this.decoder.filter = add.decoder.filter.map(f => Filter.fromObject(f));
+            } 
+
+            if(add.decoder.output){
+                this.decoder.output = add.decoder.output.map(outp => {
+                    outp.receive = outp.receive.map(recv => Receive.fromObject(recv));
+                    return Output.fromObject(outp);
+                });
+            }
+
+            if(add.decoder.matrices){
+                this.decoder.matrices = add.decoder.matrices.map(mat => Matrix.fromObject(mat));
+            }
+        }
 
         if (!this.valid()) throw new Error("invalid ADD: " + this.invalid_reason);
     }
@@ -200,7 +269,31 @@ class ADD {
             return false;
         }
 
+        if(!this.decoder){
+            this.invalid_reason = "Missing decoder property"
+            return false;
+        }
+
+        if(!this.decoder.output || this.decoder.output.length < 1){
+            this.invalid_reason = "No Outputs";
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * @returns {{filter: Array<Filter>, matrices: Array<Matrix>, output: Array<Output>}} the decoder
+     */
+    getDecoder(){
+        return this.decoder;
+    }
+
+    addFilter(f){
+        if(!(this.decoder.filter))
+            this.decoder.filter = [];
+
+        this.decoder.filter.push(Filter.fromObject(f));
     }
 
     
@@ -266,31 +359,33 @@ class ADD {
     }
 
     /**
-     * Create a set of outputs for the decoder matrices
-     * @param {Boolean} sum if true all decoder matrix outputs will be summed
+     * Create a set of outputs for the decoder matrices. 
+     * @param {Boolean} sum if true all correspoding outputs for each matrix will be summed to a single output.
      */
     createDefaultOutputs(sum){
 
-        if (!this.decoder.output)
+        if (!(this.decoder.output))
             this.decoder.output = [];
 
 
         for (let mat in this.decoder.matrices) {
+
             for (let ch = 0; ch < this.decoder.matrices[mat].numChannels(); ++ch) {
 
                 if(sum){
                     if(this.decoder.output[ch]){
-                        this.decoder.output[ch].addReceive(Receive.getDefaultReceive(mat, ch));
+                        this.decoder.output[ch].addReceive(Receive.getDefaultReceive(Number.parseInt(mat), ch));
                     } else {
-                        let new_output = new ADD.Output(`DEFAULT_${ch}`,
-                            ADD.Output.Receive.getDefaultReceive(mat, ch));
 
-                        this.decoder.output.push(new_output);
+                        this.decoder.output.push(ADD.Output.fromObject({
+                            name: `DEFAULT_${ch}`,
+                            receive: [ ADD.Output.Receive.getDefaultReceive(Number.parseInt(mat), ch) ]
+                        }));
                     }
                 } else {
 
                     let new_output = new ADD.Output(`DEFAULT_${Number.parseInt(mat)}_${ch}`,
-                        ADD.Output.Receive.getDefaultReceive(mat, ch));
+                        ADD.Output.Receive.getDefaultReceive(Number.parseInt(mat), ch));
 
                     this.decoder.output.push(new_output);
                 }
@@ -310,19 +405,29 @@ class ADD {
 
     /**
      * Export the ADD to a serializable javascript Object. You can use the exported Objects .serialize() Method to serialize the Object.
+     * @param {Object} options optional options object.
+     * @param {Boolean} options.sumMatrixOutputs if true default outputs will be summed from corresponding matrix channels.
+     * @param {Boolean} options.rebuildOutputs if true, the current output routing will be discarded and rebuild by the ADD.createDefaultOutputs() method
      * @returns {Object} A javscript object that is serializable to a valid .add file (with JSON.stringify() for example)
      */
-    export(){
+    export(options){
+
+        if(!options)
+            options = {};
 
         this.prop = "string";
 
+        if(options.rebuildOutputs)
+            this.decoder.output = null;
+
         if(!this.decoder.output)
-            this.createDefaultOutputs(false);
+            this.createDefaultOutputs(options.sumMatrixOutputs);
 
         if(!this.valid())
             throw new Error("Add in invalid state: " + this.invalid_reason);
 
         let exported = {
+            revision: this.revision,
             name: this.name,
             author: this.author || "dotadd.js library",
             description: this.description || "created with the dotadd.js library",

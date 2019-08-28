@@ -7,12 +7,15 @@ try {
 
     let test = new ADD();
 
-    test.setName("Test Decoder");
+    test.setName('Default test-decoder');
 
-    test.addMatrix(new ADD.Matrix(0,[[1.,0.,0.,0.], [1.,0.,0.,0.]]));
-    test.addMatrix(new ADD.Matrix(0,[[1.,0.,0.,0.]]));
+    test.addMatrix(new ADD.Matrix(0, [
+        [1, 0, 0, 0],
+        [1, 0, 0, 0],
+        [1, 0, 0, 0]
+    ]));
 
-    console.log(JSON.stringify(test.export(), null, 4));
+    console.log(test.export({sumMatrixOutputs:true}).serialize());
 
 
 } catch(e) {
