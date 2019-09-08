@@ -2,10 +2,18 @@
   "name": "dotadd.js",
   "version": "0.0.2",
   "description": "read dotadd files",
-  "main": "dotadd.js",
+  "main": "cjs/dotadd.js",
+  "browser": "browser/dotadd.js",
+  "module": "build/dotadd.js",
+  "watch":{
+    "build":"{src}/*.ts"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc src/* --outDir build --module commonjs && babel build/* --out-dir dist"
+    "build": "tsc && npm run build-browser && npm run build-cjs",
+    "build-browser": "cross-env BABEL_ENV=browser babel ./build --out-dir ./browser --copy-files",
+    "build-cjs": "cross-env BABEL_ENV=cjs babel ./build --out-dir ./cjs --source-maps --copy-files",
+    "watch": "npm-watch"
   },
   "repository": {
     "type": "git",
@@ -18,12 +26,12 @@
   },
   "homepage": "https://github.com/smp-3d/dotadd.js#readme",
   "devDependencies": {
-    "@babel/core": "^7.5.5",
+    "@babel/cli": "^7.6.0",
+    "@babel/core": "^7.6.0",
     "@babel/preset-env": "^7.5.5",
-    "babel": "^6.23.0",
-    "babel-cli": "^6.26.0",
-    "tsc": "^1.20150623.0",
-    "webpack": "^4.39.3",
-    "webpack-cli": "^3.3.7"
-  }
+    "cross-env": "^5.2.1",
+    "npm-watch": "^0.6.0",
+    "typescript": "^3.6.2"
+  },
+  "dependencies": {}
 }
