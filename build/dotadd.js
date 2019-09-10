@@ -121,29 +121,35 @@ export class ADD {
             pobj = JSON.parse(add.toString());
         else if (add instanceof Object)
             pobj = add;
-        this.assignIfExists(pobj, 'number', 'revision');
-        this.assignIfExists(pobj, 'string', 'name');
-        this.assignIfExists(pobj, 'string', 'author');
-        this.assignIfExists(pobj, 'string', 'description');
-        this.assignIfExists(pobj, 'string', 'date');
-        this.assignIfExists(pobj, 'number', 'version');
-        this.assignIfExists(pobj, 'object', 'decoder', 'filter');
+        this.assign_if_valid(pobj, 'number', 'revision');
+        this.assign_if_valid(pobj, 'string', 'name');
+        this.assign_if_valid(pobj, 'string', 'author');
+        this.assign_if_valid(pobj, 'string', 'description');
+        this.assign_if_valid(pobj, 'string', 'date');
+        this.assign_if_valid(pobj, 'number', 'version');
+        this.decoder = { filter: [], matrices: [], output: { channels: [], matrix: [] } };
     }
-    assignIfExists(from, type, ...prop) {
+    validateProp(prop, validator) {
+        if (typeof validator == 'string')
+            return typeof prop == validator;
+        else
+            return validator(prop);
+    }
+    assign_if_valid(from, validator, ...prop) {
         let to = this;
-        this.assignIfExistsRecurse(to, from, type, prop);
+        this.assign_if_valid_recurse(to, from, validator, prop);
     }
-    assignIfExistsRecurse(me, from, type, props) {
+    assign_if_valid_recurse(me, from, validator, props) {
         if (props.length === 1) {
-            if (from.hasOwnProperty(props[0]) && typeof from[props[0]] == type)
-                me[props[0]] == from[props[0]];
+            if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator))
+                me[props[0]] = from[props[0]];
         }
         else {
             let nextp = props.shift();
-            if (from.hasOwnProperty(nextp) && typeof from[nextp] == 'object') {
+            if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
                 if (!me.hasOwnProperty(nextp))
                     me[nextp] = {};
-                this.assignIfExistsRecurse(me[nextp], from[nextp], type, props);
+                this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
             }
         }
     }

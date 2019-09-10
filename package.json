@@ -5,15 +5,12 @@
   "main": "cjs/dotadd.js",
   "browser": "browser/dotadd.js",
   "module": "build/dotadd.js",
-  "watch":{
-    "build":"{src}/*.ts"
-  },
+  "types": "build/dotadd.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test.js",
     "build": "tsc && npm run build-browser && npm run build-cjs",
     "build-browser": "cross-env BABEL_ENV=browser babel ./build --out-dir ./browser --copy-files",
-    "build-cjs": "cross-env BABEL_ENV=cjs babel ./build --out-dir ./cjs --source-maps --copy-files",
-    "watch": "npm-watch"
+    "build-cjs": "cross-env BABEL_ENV=cjs babel ./build --out-dir ./cjs --source-maps --copy-files"
   },
   "repository": {
     "type": "git",
@@ -32,6 +29,5 @@
     "cross-env": "^5.2.1",
     "npm-watch": "^0.6.0",
     "typescript": "^3.6.2"
-  },
-  "dependencies": {}
+  }
 }
