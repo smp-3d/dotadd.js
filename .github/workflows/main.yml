@@ -16,8 +16,11 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: build
+    
+    - name: use node
       uses: actions/setup-node@v1
       with:
         version: ${{ matrix.node_version }}
+        
+    - name: build
       run: npm run build
