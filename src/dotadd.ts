@@ -142,7 +142,7 @@ export class AEDCoord {
     }
 }
 
-export class Output {
+export class OutputChannel {
 
     /**
      * name of the output
@@ -174,6 +174,10 @@ export class Output {
             this.coords = options.coords;
         }
     }
+
+    static fromObject(obj: any): OutputChannel { 
+        return new OutputChannel(obj.name, obj.type); 
+    }
 }
 
 export class ADD {
@@ -189,7 +193,7 @@ export class ADD {
         filter: Filter[],
         matrices: Matrix[],
         output: {
-            channels: Output[],
+            channels: OutputChannel[],
             matrix: number[][]
         }
     };
@@ -234,24 +238,74 @@ export class ADD {
     constructor(add?: string);
     constructor(add?: any){
 
-        let pobj = {};
+        let pobj : any = {};
 
-        if(!(add))
-            return;
-        else if(typeof add == 'string' || add instanceof String)
+        if(typeof add == 'string' || add instanceof String)
             pobj = JSON.parse(add.toString());
         else if (add instanceof Object)
             pobj = add;
 
-        this.assign_if_valid(pobj, 'number', 'revision');
-        this.assign_if_valid(pobj, 'string', 'name');
-        this.assign_if_valid(pobj, 'string', 'author');
-        this.assign_if_valid(pobj, 'string', 'description');
-        this.assign_if_valid(pobj, 'string', 'date');
-        this.assign_if_valid(pobj, 'number', 'version');
+        
 
         this.decoder = { filter: [], matrices: [], output: { channels: [], matrix: [] } };
 
+        if(add){
+
+            this.assign_if_valid(pobj, 'number', 'revision');
+            this.assign_if_valid(pobj, 'string', 'name');
+            this.assign_if_valid(pobj, 'string', 'author');
+            this.assign_if_valid(pobj, 'string', 'description');
+            this.assign_if_valid(pobj, 'string', 'date');
+            this.assign_if_valid(pobj, 'number', 'version');
+
+            if(pobj.decoder){
+
+                if(pobj.decoder.filter)
+                    this.decoder.filter = pobj.filter.map(obj => Filter.fromObject(obj));
+
+                if(pobj.decoder.matrices)
+                    this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
+
+                if(pobj.decoder.output.channels && pobj.decoder.output.matrix){
+                    this.decoder.output = {
+                        channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
+                        matrix: pobj.decoder.matrix
+                    } 
+                }
+    
+            }
+        }
+
+    }
+
+    valid() : boolean {
+
+        return true;
+    }
+
+    addMatrix(mat: Matrix) : void {
+
+        if(!this.decoder.matrices)
+            this.decoder.matrices = [];
+
+
+        this.decoder.matrices.push(mat);
+    }
+
+    addFilter(flt: Filter){
+
+        if(!this.decoder.filter)
+            this.decoder.filter = [];
+
+        this.decoder.filter.push(flt);
+    }
+
+    addOutput(out: OutputChannel, gain?: number, index?: number): void {
+        if(gain == null)
+            gain = 1.0;
+
+        if(index == null)
+            index = this.decoder.output.channels.length;
     }
 
 }

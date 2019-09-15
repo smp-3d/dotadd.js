@@ -102,7 +102,7 @@ export class AEDCoord {
         return this.d != null;
     }
 }
-export class Output {
+export class OutputChannel {
     constructor(name, type, options) {
         this.name = name;
         this.type = type;
@@ -111,23 +111,38 @@ export class Output {
             this.coords = options.coords;
         }
     }
+    static fromObject(obj) {
+        return new OutputChannel(obj.name, obj.type);
+    }
 }
 export class ADD {
     constructor(add) {
         let pobj = {};
-        if (!(add))
-            return;
-        else if (typeof add == 'string' || add instanceof String)
+        if (typeof add == 'string' || add instanceof String)
             pobj = JSON.parse(add.toString());
         else if (add instanceof Object)
             pobj = add;
-        this.assign_if_valid(pobj, 'number', 'revision');
-        this.assign_if_valid(pobj, 'string', 'name');
-        this.assign_if_valid(pobj, 'string', 'author');
-        this.assign_if_valid(pobj, 'string', 'description');
-        this.assign_if_valid(pobj, 'string', 'date');
-        this.assign_if_valid(pobj, 'number', 'version');
         this.decoder = { filter: [], matrices: [], output: { channels: [], matrix: [] } };
+        if (add) {
+            this.assign_if_valid(pobj, 'number', 'revision');
+            this.assign_if_valid(pobj, 'string', 'name');
+            this.assign_if_valid(pobj, 'string', 'author');
+            this.assign_if_valid(pobj, 'string', 'description');
+            this.assign_if_valid(pobj, 'string', 'date');
+            this.assign_if_valid(pobj, 'number', 'version');
+            if (pobj.decoder) {
+                if (pobj.decoder.filter)
+                    this.decoder.filter = pobj.filter.map(obj => Filter.fromObject(obj));
+                if (pobj.decoder.matrices)
+                    this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
+                if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+                    this.decoder.output = {
+                        channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
+                        matrix: pobj.decoder.matrix
+                    };
+                }
+            }
+        }
     }
     validateProp(prop, validator) {
         if (typeof validator == 'string')
@@ -152,5 +167,24 @@ export class ADD {
                 this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
             }
         }
+    }
+    valid() {
+        return true;
+    }
+    addMatrix(mat) {
+        if (!this.decoder.matrices)
+            this.decoder.matrices = [];
+        this.decoder.matrices.push(mat);
+    }
+    addFilter(flt) {
+        if (!this.decoder.filter)
+            this.decoder.filter = [];
+        this.decoder.filter.push(flt);
+    }
+    addOutput(out, gain, index) {
+        if (gain == null)
+            gain = 1.0;
+        if (index == null)
+            index = this.decoder.output.channels.length;
     }
 }

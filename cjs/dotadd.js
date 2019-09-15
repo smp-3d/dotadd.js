@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ADD = exports.Output = exports.AEDCoord = exports.Matrix = exports.Filter = void 0;
+exports.ADD = exports.OutputChannel = exports.AEDCoord = exports.Matrix = exports.Filter = void 0;
 
 class Filter {
   constructor(high, low) {
@@ -134,7 +134,7 @@ class AEDCoord {
 
 exports.AEDCoord = AEDCoord;
 
-class Output {
+class OutputChannel {
   constructor(name, type, options) {
     this.name = name;
     this.type = type;
@@ -145,20 +145,18 @@ class Output {
     }
   }
 
+  static fromObject(obj) {
+    return new OutputChannel(obj.name, obj.type);
+  }
+
 }
 
-exports.Output = Output;
+exports.OutputChannel = OutputChannel;
 
 class ADD {
   constructor(add) {
     let pobj = {};
-    if (!add) return;else if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
-    this.assign_if_valid(pobj, 'number', 'revision');
-    this.assign_if_valid(pobj, 'string', 'name');
-    this.assign_if_valid(pobj, 'string', 'author');
-    this.assign_if_valid(pobj, 'string', 'description');
-    this.assign_if_valid(pobj, 'string', 'date');
-    this.assign_if_valid(pobj, 'number', 'version');
+    if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
     this.decoder = {
       filter: [],
       matrices: [],
@@ -167,6 +165,27 @@ class ADD {
         matrix: []
       }
     };
+
+    if (add) {
+      this.assign_if_valid(pobj, 'number', 'revision');
+      this.assign_if_valid(pobj, 'string', 'name');
+      this.assign_if_valid(pobj, 'string', 'author');
+      this.assign_if_valid(pobj, 'string', 'description');
+      this.assign_if_valid(pobj, 'string', 'date');
+      this.assign_if_valid(pobj, 'number', 'version');
+
+      if (pobj.decoder) {
+        if (pobj.decoder.filter) this.decoder.filter = pobj.filter.map(obj => Filter.fromObject(obj));
+        if (pobj.decoder.matrices) this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
+
+        if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+          this.decoder.output = {
+            channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
+            matrix: pobj.decoder.matrix
+          };
+        }
+      }
+    }
   }
 
   validateProp(prop, validator) {
@@ -189,6 +208,25 @@ class ADD {
         this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
       }
     }
+  }
+
+  valid() {
+    return true;
+  }
+
+  addMatrix(mat) {
+    if (!this.decoder.matrices) this.decoder.matrices = [];
+    this.decoder.matrices.push(mat);
+  }
+
+  addFilter(flt) {
+    if (!this.decoder.filter) this.decoder.filter = [];
+    this.decoder.filter.push(flt);
+  }
+
+  addOutput(out, gain, index) {
+    if (gain == null) gain = 1.0;
+    if (index == null) index = this.decoder.output.channels.length;
   }
 
 }

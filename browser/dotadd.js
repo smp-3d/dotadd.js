@@ -16,7 +16,7 @@
   Object.defineProperty(_exports, "__esModule", {
     value: true
   });
-  _exports.ADD = _exports.Output = _exports.AEDCoord = _exports.Matrix = _exports.Filter = void 0;
+  _exports.ADD = _exports.OutputChannel = _exports.AEDCoord = _exports.Matrix = _exports.Filter = void 0;
 
   function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
@@ -207,19 +207,32 @@
 
   _exports.AEDCoord = AEDCoord;
 
-  var Output = function Output(name, type, options) {
-    _classCallCheck(this, Output);
+  var OutputChannel =
+  /*#__PURE__*/
+  function () {
+    function OutputChannel(name, type, options) {
+      _classCallCheck(this, OutputChannel);
 
-    this.name = name;
-    this.type = type;
+      this.name = name;
+      this.type = type;
 
-    if (options) {
-      this.description = options.description;
-      this.coords = options.coords;
+      if (options) {
+        this.description = options.description;
+        this.coords = options.coords;
+      }
     }
-  };
 
-  _exports.Output = Output;
+    _createClass(OutputChannel, null, [{
+      key: "fromObject",
+      value: function fromObject(obj) {
+        return new OutputChannel(obj.name, obj.type);
+      }
+    }]);
+
+    return OutputChannel;
+  }();
+
+  _exports.OutputChannel = OutputChannel;
 
   var ADD =
   /*#__PURE__*/
@@ -228,13 +241,7 @@
       _classCallCheck(this, ADD);
 
       var pobj = {};
-      if (!add) return;else if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
-      this.assign_if_valid(pobj, 'number', 'revision');
-      this.assign_if_valid(pobj, 'string', 'name');
-      this.assign_if_valid(pobj, 'string', 'author');
-      this.assign_if_valid(pobj, 'string', 'description');
-      this.assign_if_valid(pobj, 'string', 'date');
-      this.assign_if_valid(pobj, 'number', 'version');
+      if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
       this.decoder = {
         filter: [],
         matrices: [],
@@ -243,6 +250,33 @@
           matrix: []
         }
       };
+
+      if (add) {
+        this.assign_if_valid(pobj, 'number', 'revision');
+        this.assign_if_valid(pobj, 'string', 'name');
+        this.assign_if_valid(pobj, 'string', 'author');
+        this.assign_if_valid(pobj, 'string', 'description');
+        this.assign_if_valid(pobj, 'string', 'date');
+        this.assign_if_valid(pobj, 'number', 'version');
+
+        if (pobj.decoder) {
+          if (pobj.decoder.filter) this.decoder.filter = pobj.filter.map(function (obj) {
+            return Filter.fromObject(obj);
+          });
+          if (pobj.decoder.matrices) this.decoder.matrices = pobj.decoder.matrices.map(function (mat) {
+            return Matrix.fromObject(mat);
+          });
+
+          if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+            this.decoder.output = {
+              channels: pobj.decoder.output.channels.map(function (channel) {
+                return OutputChannel.fromObject(channel);
+              }),
+              matrix: pobj.decoder.matrix
+            };
+          }
+        }
+      }
     }
 
     _createClass(ADD, [{
@@ -274,6 +308,29 @@
             this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
           }
         }
+      }
+    }, {
+      key: "valid",
+      value: function valid() {
+        return true;
+      }
+    }, {
+      key: "addMatrix",
+      value: function addMatrix(mat) {
+        if (!this.decoder.matrices) this.decoder.matrices = [];
+        this.decoder.matrices.push(mat);
+      }
+    }, {
+      key: "addFilter",
+      value: function addFilter(flt) {
+        if (!this.decoder.filter) this.decoder.filter = [];
+        this.decoder.filter.push(flt);
+      }
+    }, {
+      key: "addOutput",
+      value: function addOutput(out, gain, index) {
+        if (gain == null) gain = 1.0;
+        if (index == null) index = this.decoder.output.channels.length;
       }
     }]);
 

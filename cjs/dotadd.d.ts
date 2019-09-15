@@ -58,7 +58,7 @@ export declare class AEDCoord {
     constructor(a: number, e: number, d: number);
     hasDistance(): boolean;
 }
-export declare class Output {
+export declare class OutputChannel {
     /**
      * name of the output
      */
@@ -79,6 +79,7 @@ export declare class Output {
         description?: string;
         coords?: AEDCoord;
     });
+    static fromObject(obj: any): OutputChannel;
 }
 export declare class ADD {
     revision: number;
@@ -91,7 +92,7 @@ export declare class ADD {
         filter: Filter[];
         matrices: Matrix[];
         output: {
-            channels: Output[];
+            channels: OutputChannel[];
             matrix: number[][];
         };
     };
@@ -100,5 +101,9 @@ export declare class ADD {
     private assign_if_valid_recurse;
     constructor();
     constructor(add?: string);
+    valid(): boolean;
+    addMatrix(mat: Matrix): void;
+    addFilter(flt: Filter): void;
+    addOutput(out: OutputChannel, gain?: number, index?: number): void;
 }
 //# sourceMappingURL=dotadd.d.ts.map
