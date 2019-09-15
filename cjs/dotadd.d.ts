@@ -13,6 +13,7 @@ export declare class Filter {
  */
 export declare class Matrix {
     input: number;
+    normalisation: string;
     matrix: number[][];
     /**
      * Construct a new Matrix.
@@ -49,6 +50,7 @@ export declare class Matrix {
  * @returns {number[]} an array of coefficents
  */
     getCoeffsForChannel(chan: number): number[];
+    ambisonicOrder(): number;
     static fromObject(obj: any): Matrix;
 }
 export declare class AEDCoord {
@@ -105,5 +107,10 @@ export declare class ADD {
     addMatrix(mat: Matrix): void;
     addFilter(flt: Filter): void;
     addOutput(out: OutputChannel, gain?: number, index?: number): void;
+    maxAmbisonicOrder(): number;
+    totalMatrixOutputs(): number;
+    maxMatrixOutputs(): number;
+    createDefaultOutputs(): void;
+    createDefaultSummedOutputs(): void;
 }
 //# sourceMappingURL=dotadd.d.ts.map

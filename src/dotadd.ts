@@ -34,6 +34,7 @@ export class Filter {
 export class Matrix {
 
     input: number;
+    normalisation: string;
     matrix: number[][];
 
     /**
@@ -117,6 +118,10 @@ export class Matrix {
             return;
 
         return this.matrix[chan];
+    }
+
+    ambisonicOrder(){
+        return Math.floor(Math.sqrt(this.numCoeffs())) - 1;
     }
 
     static fromObject(obj: any): Matrix {
@@ -284,19 +289,10 @@ export class ADD {
     }
 
     addMatrix(mat: Matrix) : void {
-
-        if(!this.decoder.matrices)
-            this.decoder.matrices = [];
-
-
         this.decoder.matrices.push(mat);
     }
 
-    addFilter(flt: Filter){
-
-        if(!this.decoder.filter)
-            this.decoder.filter = [];
-
+    addFilter(flt: Filter): void{
         this.decoder.filter.push(flt);
     }
 
@@ -306,6 +302,47 @@ export class ADD {
 
         if(index == null)
             index = this.decoder.output.channels.length;
+    }
+
+    maxAmbisonicOrder(): number{
+        return Math.max(...this.decoder.matrices.map(mat => mat.ambisonicOrder()));
+    }
+
+    totalMatrixOutputs(): number{
+        return this.decoder.matrices.reduce((val, mat) => val + mat.numChannels(), 0);
+    }
+
+    maxMatrixOutputs(): number{
+        return Math.max(...this.decoder.matrices.map(mat => mat.numChannels()));
+    }
+
+    createDefaultOutputs(): void{
+
+        this.decoder.matrices.forEach((mat, midx) => {
+
+            for(let i = 0; i < mat.numChannels(); ++i){
+
+                this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${midx}_${i}`, 'default'));
+
+                let arr: number[] = new Array(this.totalMatrixOutputs()).fill(0);
+                arr[i + ((midx)? this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+
+                this.decoder.output.matrix.push(arr);
+            }
+        });
+    }
+
+    createDefaultSummedOutputs(): void{
+
+        for(let i = 0; i < this.maxMatrixOutputs(); ++i){
+            this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${i}`, 'default'));
+            this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
+        }
+
+        this.decoder.matrices.forEach((mat, midx) => {
+            for(let i = 0; i < mat.numChannels(); ++i)
+                this.decoder.output.matrix[i][(i + ((midx)? this.decoder.matrices[midx - 1].numChannels() : 0))] = 1.0;
+        });
     }
 
 }

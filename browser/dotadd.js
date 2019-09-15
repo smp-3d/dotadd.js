@@ -18,6 +18,14 @@
   });
   _exports.ADD = _exports.OutputChannel = _exports.AEDCoord = _exports.Matrix = _exports.Filter = void 0;
 
+  function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+  function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+  function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+  function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
   function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
   function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -172,6 +180,11 @@
         if (!this.matrix) return;
         return this.matrix[chan];
       }
+    }, {
+      key: "ambisonicOrder",
+      value: function ambisonicOrder() {
+        return Math.floor(Math.sqrt(this.numCoeffs())) - 1;
+      }
     }], [{
       key: "fromObject",
       value: function fromObject(obj) {
@@ -317,13 +330,11 @@
     }, {
       key: "addMatrix",
       value: function addMatrix(mat) {
-        if (!this.decoder.matrices) this.decoder.matrices = [];
         this.decoder.matrices.push(mat);
       }
     }, {
       key: "addFilter",
       value: function addFilter(flt) {
-        if (!this.decoder.filter) this.decoder.filter = [];
         this.decoder.filter.push(flt);
       }
     }, {
@@ -331,6 +342,59 @@
       value: function addOutput(out, gain, index) {
         if (gain == null) gain = 1.0;
         if (index == null) index = this.decoder.output.channels.length;
+      }
+    }, {
+      key: "maxAmbisonicOrder",
+      value: function maxAmbisonicOrder() {
+        return Math.max.apply(Math, _toConsumableArray(this.decoder.matrices.map(function (mat) {
+          return mat.ambisonicOrder();
+        })));
+      }
+    }, {
+      key: "totalMatrixOutputs",
+      value: function totalMatrixOutputs() {
+        return this.decoder.matrices.reduce(function (val, mat) {
+          return val + mat.numChannels();
+        }, 0);
+      }
+    }, {
+      key: "maxMatrixOutputs",
+      value: function maxMatrixOutputs() {
+        return Math.max.apply(Math, _toConsumableArray(this.decoder.matrices.map(function (mat) {
+          return mat.numChannels();
+        })));
+      }
+    }, {
+      key: "createDefaultOutputs",
+      value: function createDefaultOutputs() {
+        var _this = this;
+
+        this.decoder.matrices.forEach(function (mat, midx) {
+          for (var i = 0; i < mat.numChannels(); ++i) {
+            _this.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(midx, "_").concat(i), 'default'));
+
+            var arr = new Array(_this.totalMatrixOutputs()).fill(0);
+            arr[i + (midx ? _this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+
+            _this.decoder.output.matrix.push(arr);
+          }
+        });
+      }
+    }, {
+      key: "createDefaultSummedOutputs",
+      value: function createDefaultSummedOutputs() {
+        var _this2 = this;
+
+        for (var i = 0; i < this.maxMatrixOutputs(); ++i) {
+          this.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(i), 'default'));
+          this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
+        }
+
+        this.decoder.matrices.forEach(function (mat, midx) {
+          for (var _i = 0; _i < mat.numChannels(); ++_i) {
+            _this2.decoder.output.matrix[_i][_i + (midx ? _this2.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+          }
+        });
       }
     }]);
 
