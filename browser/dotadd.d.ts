@@ -7,6 +7,15 @@ export declare class Filter {
     lo: number;
     hi: number;
 }
+export declare const Normalisation: Readonly<{
+    N3D: string;
+    SN3D: string;
+}>;
+export declare const ACN: {
+    order(acn: number): number;
+    index(acn: number): number;
+    acn(order: number, index: number): void;
+};
 /**
  * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field
  * which specifies the input band it receives audio from
@@ -20,7 +29,7 @@ export declare class Matrix {
      * @param {number} input the input band the matrix will receive signal from
      * @param {number[][]} channels an array of array of coefficents for the output channels of the matrix.
      */
-    constructor(input: number, channels: number[][]);
+    constructor(input: number, normalisation: string, channels: number[][]);
     /**
      * Set the input band the Matrix will receive signal from
      * @param {Number} input
@@ -51,6 +60,9 @@ export declare class Matrix {
  */
     getCoeffsForChannel(chan: number): number[];
     ambisonicOrder(): number;
+    setNormalisation(normalisation: string): void;
+    getNormalisation(): string;
+    renormalizeTo(normalisation: string): this;
     static fromObject(obj: any): Matrix;
 }
 export declare class AEDCoord {
@@ -98,11 +110,34 @@ export declare class ADD {
             matrix: number[][];
         };
     };
+    private _set;
     private validateProp;
     private assign_if_valid;
     private assign_if_valid_recurse;
     constructor();
     constructor(add?: string);
+    export(): {
+        name: string;
+        description: string;
+        author: string;
+        date: string;
+        revision: number;
+        version: number;
+        decoder: {
+            filter: any[];
+            matrices: {
+                normalisation: string;
+                input: number;
+                matrix: number[][];
+            }[];
+        };
+        serialize(): string;
+    };
+    setAuthor(author: string): ADD;
+    setName(name: string): ADD;
+    setDescription(desc: string): ADD;
+    setDate(date: string | Date): ADD;
+    setVersion(version: number): ADD;
     valid(): boolean;
     addMatrix(mat: Matrix): void;
     addFilter(flt: Filter): void;

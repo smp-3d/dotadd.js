@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ADD = exports.OutputChannel = exports.AEDCoord = exports.Matrix = exports.Filter = void 0;
+exports.ADD = exports.OutputChannel = exports.AEDCoord = exports.Matrix = exports.ACN = exports.Normalisation = exports.Filter = void 0;
 
 class Filter {
   constructor(high, low) {
@@ -28,13 +28,32 @@ class Filter {
   }
 
 }
+
+exports.Filter = Filter;
+const Normalisation = Object.freeze({
+  N3D: 'n3d',
+  SN3D: 'sn3d'
+});
+exports.Normalisation = Normalisation;
+const ACN = {
+  order(acn) {
+    return Math.floor(Math.sqrt(acn));
+  },
+
+  index(acn) {
+    let order = ACN.order(acn);
+    return acn - order * (order + 1);
+  },
+
+  acn(order, index) {}
+
+};
 /**
  * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field
  * which specifies the input band it receives audio from
  */
 
-
-exports.Filter = Filter;
+exports.ACN = ACN;
 
 class Matrix {
   /**
@@ -42,8 +61,9 @@ class Matrix {
    * @param {number} input the input band the matrix will receive signal from
    * @param {number[][]} channels an array of array of coefficents for the output channels of the matrix.
    */
-  constructor(input, channels) {
+  constructor(input, normalisation, channels) {
     this.input = input;
+    this.normalisation = normalisation.toLowerCase();
 
     if (channels && channels.length) {
       let csize = channels[0].length;
@@ -112,11 +132,41 @@ class Matrix {
   }
 
   ambisonicOrder() {
-    return Math.floor(Math.sqrt(this.numCoeffs())) - 1;
+    return ACN.order(this.numCoeffs() - 1);
+  }
+
+  setNormalisation(normalisation) {
+    this.normalisation = normalisation.toLowerCase();
+  }
+
+  getNormalisation() {
+    return this.normalisation;
+  }
+
+  renormalizeTo(normalisation) {
+    normalisation = normalisation.toLowerCase();
+    if (this.normalisation == normalisation) return;
+
+    if (normalisation === Normalisation.N3D) {
+      this.matrix.forEach(ch => {
+        ch.forEach((coeff, cidx) => {
+          ch[cidx] = coeff * Math.sqrt(2 * ACN.order(cidx) + 1);
+        });
+      });
+    } else if (normalisation === Normalisation.SN3D) {
+      this.matrix.forEach(ch => {
+        ch.forEach((coeff, cidx) => {
+          ch[cidx] = coeff / Math.sqrt(2 * ACN.order(cidx) + 1);
+        });
+      });
+    }
+
+    this.normalisation = normalisation;
+    return this;
   }
 
   static fromObject(obj) {
-    return new Matrix(obj.input, obj.matrix);
+    return new Matrix(obj.input, obj.normalisation, obj.matrix);
   }
 
 }
@@ -192,6 +242,11 @@ class ADD {
     }
   }
 
+  _set(prop, val) {
+    this[prop] = val;
+    return this;
+  }
+
   validateProp(prop, validator) {
     if (typeof validator == 'string') return typeof prop == validator;else return validator(prop);
   }
@@ -212,6 +267,54 @@ class ADD {
         this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
       }
     }
+  }
+
+  export() {
+    if (!this.valid()) throw new Error('Cannot export invalid ADD');
+    let export_obj = {
+      name: this.name,
+      description: this.description || "created with the dotadd.js library",
+      author: this.author || "the dotadd library creators",
+      date: this.date || new Date(Date.now()).toISOString(),
+      revision: this.revision,
+      version: this.version || 0,
+      decoder: {
+        filter: this.decoder.filter.map(flt => Object.create(flt)),
+        matrices: this.decoder.matrices.map(mat => {
+          return {
+            normalisation: mat.normalisation,
+            input: mat.input,
+            matrix: mat.matrix.map(chs => Array.from(chs))
+          };
+        })
+      },
+
+      serialize() {
+        return JSON.stringify(export_obj);
+      }
+
+    };
+    return export_obj;
+  }
+
+  setAuthor(author) {
+    return this._set('author', author);
+  }
+
+  setName(name) {
+    return this._set('name', name);
+  }
+
+  setDescription(desc) {
+    return this._set('description', desc);
+  }
+
+  setDate(date) {
+    return this._set('date', new Date(date).toISOString());
+  }
+
+  setVersion(version) {
+    return this._set('version', version);
   }
 
   valid() {
