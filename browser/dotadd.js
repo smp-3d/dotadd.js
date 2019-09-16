@@ -34,14 +34,23 @@
 
   function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+  /**
+   * The dotadd Filter class. Respresents a single filter band.
+   */
   var Filter =
   /*#__PURE__*/
   function () {
+    /**
+     * Construct a new Filterband. At least high or low must be given to construct a valid filter band object
+     * @param high beginning of the high frequency stopbband can be null
+     * @param low beginning of the high frequency stopbband can be null or omitted
+     */
     function Filter(high, low) {
       _classCallCheck(this, Filter);
 
-      this.hi = high;
-      this.lo = low;
+      if (high == null && low == null) throw new Error('Cannot construct a Filterband without frequencies');
+      if (high != null) this.hi = high;
+      if (low != null) this.lo = low;
     }
 
     _createClass(Filter, [{
@@ -288,7 +297,10 @@
     _createClass(OutputChannel, null, [{
       key: "fromObject",
       value: function fromObject(obj) {
-        return new OutputChannel(obj.name, obj.type);
+        var ret = new OutputChannel(obj.name, obj.type);
+        if (obj.coords) Object.assign(ret.coords, obj.coords);
+        if (obj.description) ret.description = obj.description;
+        return ret;
       }
     }]);
 
@@ -323,7 +335,7 @@
         this.assign_if_valid(pobj, 'number', 'version');
 
         if (pobj.decoder) {
-          if (pobj.decoder.filter) this.decoder.filter = pobj.filter.map(function (obj) {
+          if (pobj.decoder.filter) this.decoder.filter = pobj.decoder.filter.map(function (obj) {
             return Filter.fromObject(obj);
           });
           if (pobj.decoder.matrices) this.decoder.matrices = pobj.decoder.matrices.map(function (mat) {
@@ -335,7 +347,7 @@
               channels: pobj.decoder.output.channels.map(function (channel) {
                 return OutputChannel.fromObject(channel);
               }),
-              matrix: pobj.decoder.matrix
+              matrix: pobj.decoder.output.matrix || []
             };
           }
         }
@@ -391,7 +403,7 @@
           version: this.version || 0,
           decoder: {
             filter: this.decoder.filter.map(function (flt) {
-              return Object.create(flt);
+              return Filter.fromObject(flt);
             }),
             matrices: this.decoder.matrices.map(function (mat) {
               return {
@@ -401,7 +413,15 @@
                   return Array.from(chs);
                 })
               };
-            })
+            }),
+            output: {
+              channels: this.decoder.output.channels.map(function (chan) {
+                return OutputChannel.fromObject(chan);
+              }),
+              matrix: this.decoder.output.matrix.map(function (chan) {
+                return Array.from(chan);
+              })
+            }
           },
           serialize: function serialize() {
             return JSON.stringify(export_obj);

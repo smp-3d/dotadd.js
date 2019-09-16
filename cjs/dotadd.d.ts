@@ -1,5 +1,13 @@
+/**
+ * The dotadd Filter class. Respresents a single filter band.
+ */
 export declare class Filter {
-    constructor(high: number, low: number);
+    /**
+     * Construct a new Filterband. At least high or low must be given to construct a valid filter band object
+     * @param high beginning of the high frequency stopbband can be null
+     * @param low beginning of the high frequency stopbband can be null or omitted
+     */
+    constructor(high: number, low?: number);
     isLowpass(): boolean;
     isHighpass(): boolean;
     isBandpass(): boolean;
@@ -124,12 +132,16 @@ export declare class ADD {
         revision: number;
         version: number;
         decoder: {
-            filter: any[];
+            filter: Filter[];
             matrices: {
                 normalisation: string;
                 input: number;
                 matrix: number[][];
             }[];
+            output: {
+                channels: OutputChannel[];
+                matrix: number[][];
+            };
         };
         serialize(): string;
     };

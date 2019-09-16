@@ -1,7 +1,19 @@
+/**
+ * The dotadd Filter class. Respresents a single filter band.
+ */
 export class Filter {
+    /**
+     * Construct a new Filterband. At least high or low must be given to construct a valid filter band object
+     * @param high beginning of the high frequency stopbband can be null
+     * @param low beginning of the high frequency stopbband can be null or omitted
+     */
     constructor(high, low) {
-        this.hi = high;
-        this.lo = low;
+        if ((high == null) && (low == null))
+            throw new Error('Cannot construct a Filterband without frequencies');
+        if (high != null)
+            this.hi = high;
+        if (low != null)
+            this.lo = low;
     }
     isLowpass() {
         return this.lo == undefined && this.hi != undefined;
@@ -158,7 +170,12 @@ export class OutputChannel {
         }
     }
     static fromObject(obj) {
-        return new OutputChannel(obj.name, obj.type);
+        let ret = new OutputChannel(obj.name, obj.type);
+        if (obj.coords)
+            Object.assign(ret.coords, obj.coords);
+        if (obj.description)
+            ret.description = obj.description;
+        return ret;
     }
 }
 export class ADD {
@@ -178,13 +195,13 @@ export class ADD {
             this.assign_if_valid(pobj, 'number', 'version');
             if (pobj.decoder) {
                 if (pobj.decoder.filter)
-                    this.decoder.filter = pobj.filter.map(obj => Filter.fromObject(obj));
+                    this.decoder.filter = pobj.decoder.filter.map(obj => Filter.fromObject(obj));
                 if (pobj.decoder.matrices)
                     this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
                 if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
                     this.decoder.output = {
                         channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
-                        matrix: pobj.decoder.matrix
+                        matrix: pobj.decoder.output.matrix || []
                     };
                 }
             }
@@ -229,14 +246,18 @@ export class ADD {
             revision: this.revision,
             version: this.version || 0,
             decoder: {
-                filter: this.decoder.filter.map(flt => Object.create(flt)),
+                filter: this.decoder.filter.map(flt => Filter.fromObject(flt)),
                 matrices: this.decoder.matrices.map(mat => {
                     return {
                         normalisation: mat.normalisation,
                         input: mat.input,
                         matrix: mat.matrix.map(chs => Array.from(chs))
                     };
-                })
+                }),
+                output: {
+                    channels: this.decoder.output.channels.map(chan => OutputChannel.fromObject(chan)),
+                    matrix: this.decoder.output.matrix.map(chan => Array.from(chan))
+                }
             },
             serialize() {
                 return JSON.stringify(export_obj);
