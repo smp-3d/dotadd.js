@@ -208,7 +208,7 @@ export declare class ADD {
     valid(): boolean;
     addMatrix(mat: Matrix): void;
     addFilter(flt: Filter): void;
-    addOutput(out: OutputChannel, gain?: number, index?: number): void;
+    addOutput(out: OutputChannel): void;
     maxAmbisonicOrder(): number;
     totalMatrixOutputs(): number;
     maxMatrixOutputs(): number;

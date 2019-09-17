@@ -482,12 +482,8 @@ export class ADD {
         this.decoder.filter.push(flt);
     }
 
-    addOutput(out: OutputChannel, gain?: number, index?: number): void {
-        if(gain == null)
-            gain = 1.0;
-
-        if(index == null)
-            index = this.decoder.output.channels.length;
+    addOutput(out: OutputChannel): void {
+        this.decoder.output.channels.push(out);
     }
 
     maxAmbisonicOrder(): number{

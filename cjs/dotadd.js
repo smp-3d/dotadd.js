@@ -417,9 +417,8 @@ class ADD {
     this.decoder.filter.push(flt);
   }
 
-  addOutput(out, gain, index) {
-    if (gain == null) gain = 1.0;
-    if (index == null) index = this.decoder.output.channels.length;
+  addOutput(out) {
+    this.decoder.output.channels.push(out);
   }
 
   maxAmbisonicOrder() {

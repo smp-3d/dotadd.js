@@ -545,9 +545,8 @@
       }
     }, {
       key: "addOutput",
-      value: function addOutput(out, gain, index) {
-        if (gain == null) gain = 1.0;
-        if (index == null) index = this.decoder.output.channels.length;
+      value: function addOutput(out) {
+        this.decoder.output.channels.push(out);
       }
     }, {
       key: "maxAmbisonicOrder",
