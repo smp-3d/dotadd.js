@@ -21,5 +21,3 @@ b.addFilter(new Filter(null, 200));
 b.createDefaultSummedOutputs();
 
 console.log(b.export().serialize());
-
-fs.writeFileSync('/Users/jonasohland/Desktop/test_add.add', b.export().serialize());
