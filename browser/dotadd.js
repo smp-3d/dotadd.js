@@ -83,16 +83,37 @@
     N3D: 'n3d',
     SN3D: 'sn3d'
   });
+  /**
+   * Function to handle Ambisonic Channel Numbers (ACN)
+   */
+
   _exports.Normalisation = Normalisation;
   var ACN = {
+    /**
+     * Get the Ambisonic Order (l) from an ACN
+     * @param acn ACN
+     */
     order: function order(acn) {
       return Math.floor(Math.sqrt(acn));
     },
+
+    /**
+     * Get the Ambisonic Index (n) from an ACN
+     * @param acn ACN
+     */
     index: function index(acn) {
       var order = ACN.order(acn);
       return acn - order * (order + 1);
     },
-    acn: function acn(order, index) {}
+
+    /**
+     * Calculate an ACN from Order l and Index n
+     * @param order Ambisonic Order (l)
+     * @param index Ambisonic Index (n)
+     */
+    acn: function acn(order, index) {
+      return Math.pow(order, 2) * order + index;
+    }
   };
   /**
    * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field
@@ -195,10 +216,10 @@
         this.matrix[chan] = coeffs;
       }
       /**
-      * get the coefficents for a channel in the Matrix
-      * @param {number} chan the channel number
-      * @returns {number[]} an array of coefficents
-      */
+       * get the coefficents for a channel in the Matrix
+       * @param {number} chan the channel number
+       * @returns {number[]} an array of coefficents
+       */
 
     }, {
       key: "getCoeffsForChannel",
@@ -206,21 +227,39 @@
         if (!this.matrix) return;
         return this.matrix[chan];
       }
+      /**
+       * Get the Ambisonic Order (l) from this decoding matrix
+       */
+
     }, {
       key: "ambisonicOrder",
       value: function ambisonicOrder() {
         return ACN.order(this.numCoeffs() - 1);
       }
+      /**
+       * Set the normalisation the matrix has. This will not change any values other than the 'normalisation' field
+       * @param normalisation the Normalisation type ('n3d' or 'sn3d')
+       */
+
     }, {
       key: "setNormalisation",
       value: function setNormalisation(normalisation) {
         this.normalisation = normalisation.toLowerCase();
       }
+      /**
+       *
+       */
+
     }, {
       key: "getNormalisation",
       value: function getNormalisation() {
         return this.normalisation;
       }
+      /**
+       * change the normalisation of the matrix values
+       * @param normalisation the new normalisation type ('n3d' or 'sn3d')
+       */
+
     }, {
       key: "renormalizeTo",
       value: function renormalizeTo(normalisation) {
@@ -253,12 +292,19 @@
 
     return Matrix;
   }();
+  /**
+   * An AE(D) Coordinate. The distance value is optional
+   */
+
 
   _exports.Matrix = Matrix;
 
   var AEDCoord =
   /*#__PURE__*/
   function () {
+    /**
+     * construct a new AE(D) Coordinate
+     */
     function AEDCoord(a, e, d) {
       _classCallCheck(this, AEDCoord);
 
@@ -266,6 +312,10 @@
       this.e = e;
       this.d = d;
     }
+    /**
+     * true if the Coordinate has a distance value
+     */
+
 
     _createClass(AEDCoord, [{
       key: "hasDistance",
@@ -276,12 +326,22 @@
 
     return AEDCoord;
   }();
+  /**
+   * Output channel class. Represents a named output of an Ambisonic decoder.
+   */
+
 
   _exports.AEDCoord = AEDCoord;
 
   var OutputChannel =
   /*#__PURE__*/
   function () {
+    /**
+     *
+     * @param name name for the Output
+     * @param type type of output e.g. 'spk', 'sub', 'stereo-submix'
+     * @param options supply coordinates or a description for the output here
+     */
     function OutputChannel(name, type, options) {
       _classCallCheck(this, OutputChannel);
 
@@ -293,6 +353,10 @@
         this.coords = options.coords;
       }
     }
+    /**
+     * Create a new OutputChannel from a plain Javascript Object
+     */
+
 
     _createClass(OutputChannel, null, [{
       key: "fromObject",
@@ -306,12 +370,21 @@
 
     return OutputChannel;
   }();
+  /**
+   * Where all the magic happens. The ADD Class.
+   * Represents all properties of an ambisonic decoder that can be stored in a .add File
+   */
+
 
   _exports.OutputChannel = OutputChannel;
 
   var ADD =
   /*#__PURE__*/
   function () {
+    /**
+     * Construct a new ADD
+     * @param add
+     */
     function ADD(add) {
       _classCallCheck(this, ADD);
 

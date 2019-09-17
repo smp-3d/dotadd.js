@@ -19,10 +19,26 @@ export declare const Normalisation: Readonly<{
     N3D: string;
     SN3D: string;
 }>;
+/**
+ * Function to handle Ambisonic Channel Numbers (ACN)
+ */
 export declare const ACN: {
+    /**
+     * Get the Ambisonic Order (l) from an ACN
+     * @param acn ACN
+     */
     order(acn: number): number;
+    /**
+     * Get the Ambisonic Index (n) from an ACN
+     * @param acn ACN
+     */
     index(acn: number): number;
-    acn(order: number, index: number): void;
+    /**
+     * Calculate an ACN from Order l and Index n
+     * @param order Ambisonic Order (l)
+     * @param index Ambisonic Index (n)
+     */
+    acn(order: number, index: number): number;
 };
 /**
  * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field
@@ -62,24 +78,50 @@ export declare class Matrix {
      */
     setCoeffsForChannel(chan: number, coeffs: number[]): void;
     /**
- * get the coefficents for a channel in the Matrix
- * @param {number} chan the channel number
- * @returns {number[]} an array of coefficents
- */
+     * get the coefficents for a channel in the Matrix
+     * @param {number} chan the channel number
+     * @returns {number[]} an array of coefficents
+     */
     getCoeffsForChannel(chan: number): number[];
+    /**
+     * Get the Ambisonic Order (l) from this decoding matrix
+     */
     ambisonicOrder(): number;
+    /**
+     * Set the normalisation the matrix has. This will not change any values other than the 'normalisation' field
+     * @param normalisation the Normalisation type ('n3d' or 'sn3d')
+     */
     setNormalisation(normalisation: string): void;
+    /**
+     *
+     */
     getNormalisation(): string;
+    /**
+     * change the normalisation of the matrix values
+     * @param normalisation the new normalisation type ('n3d' or 'sn3d')
+     */
     renormalizeTo(normalisation: string): this;
     static fromObject(obj: any): Matrix;
 }
+/**
+ * An AE(D) Coordinate. The distance value is optional
+ */
 export declare class AEDCoord {
     a: number;
     e: number;
     d: number;
-    constructor(a: number, e: number, d: number);
+    /**
+     * construct a new AE(D) Coordinate
+     */
+    constructor(a: number, e: number, d?: number);
+    /**
+     * true if the Coordinate has a distance value
+     */
     hasDistance(): boolean;
 }
+/**
+ * Output channel class. Represents a named output of an Ambisonic decoder.
+ */
 export declare class OutputChannel {
     /**
      * name of the output
@@ -93,16 +135,26 @@ export declare class OutputChannel {
      * type of output, e.g. 'spk', 'sub', 'stereo-submix'
      */
     type: string;
+    coords: AEDCoord;
     /**
      *
+     * @param name name for the Output
+     * @param type type of output e.g. 'spk', 'sub', 'stereo-submix'
+     * @param options supply coordinates or a description for the output here
      */
-    coords: AEDCoord;
     constructor(name: string, type: string, options?: {
         description?: string;
         coords?: AEDCoord;
     });
+    /**
+     * Create a new OutputChannel from a plain Javascript Object
+     */
     static fromObject(obj: any): OutputChannel;
 }
+/**
+ * Where all the magic happens. The ADD Class.
+ * Represents all properties of an ambisonic decoder that can be stored in a .add File
+ */
 export declare class ADD {
     revision: number;
     name: string;
@@ -122,8 +174,11 @@ export declare class ADD {
     private validateProp;
     private assign_if_valid;
     private assign_if_valid_recurse;
-    constructor();
-    constructor(add?: string);
+    /**
+     * Construct a new ADD
+     * @param add
+     */
+    constructor(add?: any);
     export(): {
         name: string;
         description: string;
