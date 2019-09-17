@@ -388,6 +388,7 @@
     function ADD(add) {
       _classCallCheck(this, ADD);
 
+      this.revision = 0;
       var pobj = {};
       if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
       this.decoder = {

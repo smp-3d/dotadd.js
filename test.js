@@ -1,4 +1,6 @@
 const { ADD, Matrix, Normalisation, ACN, Filter } = require('./cjs/dotadd');
+const fs = require('fs');
+
 
 let b = new ADD();
 
@@ -20,8 +22,4 @@ b.createDefaultSummedOutputs();
 
 console.log(b.export().serialize());
 
-let k = new ADD(b.export());
-
-k.decoder.matrices[0].renormalizeTo(Normalisation.N3D);
-
-console.log(k.export().serialize());
+fs.writeFileSync('/Users/jonasohland/Desktop/test_add.add', b.export().serialize());

@@ -292,6 +292,7 @@ class ADD {
    * @param add
    */
   constructor(add) {
+    this.revision = 0;
     let pobj = {};
     if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
     this.decoder = {

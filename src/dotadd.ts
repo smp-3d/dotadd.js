@@ -321,7 +321,7 @@ export class OutputChannel {
  */
 export class ADD {
 
-    revision: number;
+    revision: number = 0;
     name: string;
     author: string;
     description: string;
