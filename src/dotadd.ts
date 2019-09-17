@@ -376,8 +376,6 @@ export class ADD {
         }
     }
 
-    constructor();
-    constructor(add?: string);
     /**
      * Construct a new ADD
      * @param add 
