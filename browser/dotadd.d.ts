@@ -171,9 +171,6 @@ export declare class ADD {
         };
     };
     private _set;
-    private validateProp;
-    private assign_if_valid;
-    private assign_if_valid_recurse;
     /**
      * Construct a new ADD
      * @param add
@@ -205,6 +202,8 @@ export declare class ADD {
     setDescription(desc: string): ADD;
     setDate(date: string | Date): ADD;
     setVersion(version: number): ADD;
+    createDefaultMetadata(): void;
+    repair(): void;
     valid(): boolean;
     addMatrix(mat: Matrix): void;
     addFilter(flt: Filter): void;
@@ -214,5 +213,10 @@ export declare class ADD {
     maxMatrixOutputs(): number;
     createDefaultOutputs(): void;
     createDefaultSummedOutputs(): void;
+    dateValid(): boolean;
+    hasNoOutputs(): boolean;
+    validateOutputs(): boolean;
+    validateFilters(): void;
+    validateDecoders(): void;
 }
 //# sourceMappingURL=dotadd.d.ts.map

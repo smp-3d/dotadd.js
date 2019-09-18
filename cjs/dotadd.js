@@ -5,9 +5,36 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.ADD = exports.OutputChannel = exports.AEDCoord = exports.Matrix = exports.ACN = exports.Normalisation = exports.Filter = void 0;
 
+function is_valid_string(str) {
+  return str && str != '';
+}
+
+function validateProp(prop, validator) {
+  if (typeof validator == 'string') return typeof prop == validator;else return validator(prop);
+}
+
+function assign_if_valid(me, from, validator, ...prop) {
+  let to = me;
+  this.assign_if_valid_recurse(to, from, validator, prop);
+}
+
+function assign_if_valid_recurse(me, from, validator, props) {
+  if (props.length === 1) {
+    if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
+  } else {
+    let nextp = props.shift();
+
+    if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
+      if (!me.hasOwnProperty(nextp)) me[nextp] = {};
+      this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
+    }
+  }
+}
 /**
  * The dotadd Filter class. Respresents a single filter band.
  */
+
+
 class Filter {
   /**
    * Construct a new Filterband. At least high or low must be given to construct a valid filter band object
@@ -305,12 +332,12 @@ class ADD {
     };
 
     if (add) {
-      this.assign_if_valid(pobj, 'number', 'revision');
-      this.assign_if_valid(pobj, 'string', 'name');
-      this.assign_if_valid(pobj, 'string', 'author');
-      this.assign_if_valid(pobj, 'string', 'description');
-      this.assign_if_valid(pobj, 'string', 'date');
-      this.assign_if_valid(pobj, 'number', 'version');
+      assign_if_valid(this, pobj, 'number', 'revision');
+      assign_if_valid(this, pobj, 'string', 'name');
+      assign_if_valid(this, pobj, 'string', 'author');
+      assign_if_valid(this, pobj, 'string', 'description');
+      assign_if_valid(this, pobj, 'string', 'date');
+      assign_if_valid(this, pobj, 'number', 'version');
 
       if (pobj.decoder) {
         if (pobj.decoder.filter) this.decoder.filter = pobj.decoder.filter.map(obj => Filter.fromObject(obj));
@@ -331,37 +358,15 @@ class ADD {
     return this;
   }
 
-  validateProp(prop, validator) {
-    if (typeof validator == 'string') return typeof prop == validator;else return validator(prop);
-  }
-
-  assign_if_valid(from, validator, ...prop) {
-    let to = this;
-    this.assign_if_valid_recurse(to, from, validator, prop);
-  }
-
-  assign_if_valid_recurse(me, from, validator, props) {
-    if (props.length === 1) {
-      if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
-    } else {
-      let nextp = props.shift();
-
-      if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
-        if (!me.hasOwnProperty(nextp)) me[nextp] = {};
-        this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
-      }
-    }
-  }
-
   export() {
     if (!this.valid()) throw new Error('Cannot export invalid ADD');
     let export_obj = {
       name: this.name,
-      description: this.description || "created with the dotadd.js library",
-      author: this.author || "the dotadd library creators",
-      date: this.date || new Date(Date.now()).toISOString(),
+      description: this.description,
+      author: this.author,
+      date: this.date,
       revision: this.revision,
-      version: this.version || 0,
+      version: this.version,
       decoder: {
         filter: this.decoder.filter.map(flt => Filter.fromObject(flt)),
         matrices: this.decoder.matrices.map(mat => {
@@ -405,7 +410,31 @@ class ADD {
     return this._set('version', version);
   }
 
+  createDefaultMetadata() {
+    this.author = this.author || 'the dotadd library creators';
+    this.description = this.description || 'created with the dotadd.js library';
+    this.version = this.version || 0;
+    if (!this.dateValid()) this.date = new Date(Date.now()).toISOString();
+  }
+
+  repair() {
+    if (this.hasNoOutputs()) this.createDefaultSummedOutputs();
+    if (!this.valid()) this.createDefaultMetadata();
+
+    if (!this.valid()) {
+      this.decoder.output.channels = [];
+      this.decoder.output.matrix = [];
+      this.createDefaultSummedOutputs();
+    }
+  }
+
   valid() {
+    if (!is_valid_string(this.name)) return false;
+    if (!is_valid_string(this.author)) return false;
+    if (!is_valid_string(this.description)) return false;
+    if (this.version && Number.parseInt(this.version.toString()) == NaN) return false;
+    if (!this.dateValid()) return false;
+    if (!this.validateOutputs()) return false;
     return true;
   }
 
@@ -454,6 +483,31 @@ class ADD {
       for (let i = 0; i < mat.numChannels(); ++i) this.decoder.output.matrix[i][i + (midx ? this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
     });
   }
+
+  dateValid() {
+    return !Number.isNaN(Date.parse(this.date));
+  }
+
+  hasNoOutputs() {
+    return this.decoder.output.channels.length == 0 || this.decoder.output.matrix.length == 0;
+  }
+
+  validateOutputs() {
+    if (this.hasNoOutputs()) return false;
+    if (!(this.decoder.output.channels.length == this.decoder.output.matrix.length)) return false;
+    let inputs = this.decoder.output.matrix[0].length;
+    let valid = true;
+    let mixer_inputs = this.decoder.output.matrix.forEach(channel => {
+      if (channel.length != inputs) valid = false;
+    });
+    if (!valid) return false;
+    if (this.totalMatrixOutputs() != inputs) return false;
+    return true;
+  }
+
+  validateFilters() {}
+
+  validateDecoders() {}
 
 }
 

@@ -4,7 +4,7 @@ const fs = require('fs');
 
 let b = new ADD();
 
-b.setAuthor('Jonas Ohland').setDate(Date.now()).setDescription('Test Decoder');
+b.setName('Test Decoder')
 
 b.addMatrix(
     new Matrix(0,
@@ -15,9 +15,6 @@ b.addMatrix(
             [1, 0, 0.6, 0]
         ]));
 
-b.addFilter(new Filter(200));
-b.addFilter(new Filter(null, 200));
+b.repair();
 
-b.createDefaultSummedOutputs();
-
-console.log(b.export().serialize());
+console.log(JSON.stringify(b.export(), null, 4));

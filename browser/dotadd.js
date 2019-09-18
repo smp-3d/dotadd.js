@@ -26,17 +26,49 @@
 
   function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
-  function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
   function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
   function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
   function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+  function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+  function is_valid_string(str) {
+    return str && str != '';
+  }
+
+  function validateProp(prop, validator) {
+    if (typeof validator == 'string') return _typeof(prop) == validator;else return validator(prop);
+  }
+
+  function assign_if_valid(me, from, validator) {
+    var to = me;
+
+    for (var _len = arguments.length, prop = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      prop[_key - 3] = arguments[_key];
+    }
+
+    this.assign_if_valid_recurse(to, from, validator, prop);
+  }
+
+  function assign_if_valid_recurse(me, from, validator, props) {
+    if (props.length === 1) {
+      if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
+    } else {
+      var nextp = props.shift();
+
+      if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
+        if (!me.hasOwnProperty(nextp)) me[nextp] = {};
+        this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
+      }
+    }
+  }
   /**
    * The dotadd Filter class. Respresents a single filter band.
    */
+
+
   var Filter =
   /*#__PURE__*/
   function () {
@@ -401,12 +433,12 @@
       };
 
       if (add) {
-        this.assign_if_valid(pobj, 'number', 'revision');
-        this.assign_if_valid(pobj, 'string', 'name');
-        this.assign_if_valid(pobj, 'string', 'author');
-        this.assign_if_valid(pobj, 'string', 'description');
-        this.assign_if_valid(pobj, 'string', 'date');
-        this.assign_if_valid(pobj, 'number', 'version');
+        assign_if_valid(this, pobj, 'number', 'revision');
+        assign_if_valid(this, pobj, 'string', 'name');
+        assign_if_valid(this, pobj, 'string', 'author');
+        assign_if_valid(this, pobj, 'string', 'description');
+        assign_if_valid(this, pobj, 'string', 'date');
+        assign_if_valid(this, pobj, 'number', 'version');
 
         if (pobj.decoder) {
           if (pobj.decoder.filter) this.decoder.filter = pobj.decoder.filter.map(function (obj) {
@@ -435,46 +467,16 @@
         return this;
       }
     }, {
-      key: "validateProp",
-      value: function validateProp(prop, validator) {
-        if (typeof validator == 'string') return _typeof(prop) == validator;else return validator(prop);
-      }
-    }, {
-      key: "assign_if_valid",
-      value: function assign_if_valid(from, validator) {
-        var to = this;
-
-        for (var _len = arguments.length, prop = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-          prop[_key - 2] = arguments[_key];
-        }
-
-        this.assign_if_valid_recurse(to, from, validator, prop);
-      }
-    }, {
-      key: "assign_if_valid_recurse",
-      value: function assign_if_valid_recurse(me, from, validator, props) {
-        if (props.length === 1) {
-          if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
-        } else {
-          var nextp = props.shift();
-
-          if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
-            if (!me.hasOwnProperty(nextp)) me[nextp] = {};
-            this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
-          }
-        }
-      }
-    }, {
       key: "export",
       value: function _export() {
         if (!this.valid()) throw new Error('Cannot export invalid ADD');
         var export_obj = {
           name: this.name,
-          description: this.description || "created with the dotadd.js library",
-          author: this.author || "the dotadd library creators",
-          date: this.date || new Date(Date.now()).toISOString(),
+          description: this.description,
+          author: this.author,
+          date: this.date,
           revision: this.revision,
-          version: this.version || 0,
+          version: this.version,
           decoder: {
             filter: this.decoder.filter.map(function (flt) {
               return Filter.fromObject(flt);
@@ -529,8 +531,34 @@
         return this._set('version', version);
       }
     }, {
+      key: "createDefaultMetadata",
+      value: function createDefaultMetadata() {
+        this.author = this.author || 'the dotadd library creators';
+        this.description = this.description || 'created with the dotadd.js library';
+        this.version = this.version || 0;
+        if (!this.dateValid()) this.date = new Date(Date.now()).toISOString();
+      }
+    }, {
+      key: "repair",
+      value: function repair() {
+        if (this.hasNoOutputs()) this.createDefaultSummedOutputs();
+        if (!this.valid()) this.createDefaultMetadata();
+
+        if (!this.valid()) {
+          this.decoder.output.channels = [];
+          this.decoder.output.matrix = [];
+          this.createDefaultSummedOutputs();
+        }
+      }
+    }, {
       key: "valid",
       value: function valid() {
+        if (!is_valid_string(this.name)) return false;
+        if (!is_valid_string(this.author)) return false;
+        if (!is_valid_string(this.description)) return false;
+        if (this.version && Number.parseInt(this.version.toString()) == NaN) return false;
+        if (!this.dateValid()) return false;
+        if (!this.validateOutputs()) return false;
         return true;
       }
     }, {
@@ -601,6 +629,36 @@
           }
         });
       }
+    }, {
+      key: "dateValid",
+      value: function dateValid() {
+        return !Number.isNaN(Date.parse(this.date));
+      }
+    }, {
+      key: "hasNoOutputs",
+      value: function hasNoOutputs() {
+        return this.decoder.output.channels.length == 0 || this.decoder.output.matrix.length == 0;
+      }
+    }, {
+      key: "validateOutputs",
+      value: function validateOutputs() {
+        if (this.hasNoOutputs()) return false;
+        if (!(this.decoder.output.channels.length == this.decoder.output.matrix.length)) return false;
+        var inputs = this.decoder.output.matrix[0].length;
+        var valid = true;
+        var mixer_inputs = this.decoder.output.matrix.forEach(function (channel) {
+          if (channel.length != inputs) valid = false;
+        });
+        if (!valid) return false;
+        if (this.totalMatrixOutputs() != inputs) return false;
+        return true;
+      }
+    }, {
+      key: "validateFilters",
+      value: function validateFilters() {}
+    }, {
+      key: "validateDecoders",
+      value: function validateDecoders() {}
     }]);
 
     return ADD;

@@ -1,3 +1,44 @@
+function is_valid_string(str): boolean {
+    return (str) && str != '';
+}
+
+
+function validateProp(prop: any, validator: Function): boolean;
+function validateProp(prop: any, validator: string): boolean;
+function validateProp(prop: any, validator: any): boolean {
+    if (typeof validator == 'string')
+        return typeof prop == validator;
+    else return validator(prop);
+}
+
+
+function assign_if_valid(me: any, from: Object, validator: any, ...prop: string[]) {
+    let to = me;
+    this.assign_if_valid_recurse(to, from, validator, prop);
+
+}
+
+function assign_if_valid_recurse(me: Object, from: Object, validator: any, props: string[]) {
+
+    if (props.length === 1) {
+        if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator))
+            me[props[0]] = from[props[0]];
+
+    } else {
+
+        let nextp = props.shift();
+
+        if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
+
+            if (!me.hasOwnProperty(nextp))
+                me[nextp] = {};
+
+            this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
+
+        }
+    }
+}
+
 /**
  * The dotadd Filter class. Respresents a single filter band. 
  */
@@ -8,15 +49,14 @@ export class Filter {
      * @param high beginning of the high frequency stopbband can be null
      * @param low beginning of the high frequency stopbband can be null or omitted
      */
-    constructor(high: number, low?: number)
-    {
-        if((high == null) && (low == null))
+    constructor(high: number, low?: number) {
+        if ((high == null) && (low == null))
             throw new Error('Cannot construct a Filterband without frequencies');
 
-        if(high != null)
+        if (high != null)
             this.hi = high;
 
-        if(low != null)
+        if (low != null)
             this.lo = low;
     }
 
@@ -54,7 +94,7 @@ export const ACN = {
      * Get the Ambisonic Order (l) from an ACN
      * @param acn ACN
      */
-    order(acn: number){
+    order(acn: number) {
         return Math.floor(Math.sqrt(acn));
     },
 
@@ -62,9 +102,9 @@ export const ACN = {
      * Get the Ambisonic Index (n) from an ACN
      * @param acn ACN
      */
-    index(acn: number){
+    index(acn: number) {
         let order = ACN.order(acn);
-        return acn - order*(order+1);
+        return acn - order * (order + 1);
     },
 
     /**
@@ -72,7 +112,7 @@ export const ACN = {
      * @param order Ambisonic Order (l)
      * @param index Ambisonic Index (n)
      */
-    acn(order: number, index: number){
+    acn(order: number, index: number) {
         return Math.pow(order, 2) * order + index;
     }
 }
@@ -198,27 +238,27 @@ export class Matrix {
      * change the normalisation of the matrix values
      * @param normalisation the new normalisation type ('n3d' or 'sn3d')
      */
-    renormalizeTo(normalisation: string){
+    renormalizeTo(normalisation: string) {
 
         normalisation = normalisation.toLowerCase();
 
-        if(this.normalisation == normalisation)
+        if (this.normalisation == normalisation)
             return;
 
-        if(normalisation === Normalisation.N3D){
+        if (normalisation === Normalisation.N3D) {
 
             this.matrix.forEach((ch) => {
                 ch.forEach((coeff, cidx) => {
-                    ch[cidx] = coeff * (Math.sqrt(2* ACN.order(cidx) + 1));
-                }); 
+                    ch[cidx] = coeff * (Math.sqrt(2 * ACN.order(cidx) + 1));
+                });
             })
 
         }
-        else if (normalisation === Normalisation.SN3D){
+        else if (normalisation === Normalisation.SN3D) {
             this.matrix.forEach((ch) => {
                 ch.forEach((coeff, cidx) => {
-                    ch[cidx] = coeff / (Math.sqrt(2* ACN.order(cidx) + 1));
-                }); 
+                    ch[cidx] = coeff / (Math.sqrt(2 * ACN.order(cidx) + 1));
+                });
             })
         }
 
@@ -286,12 +326,12 @@ export class OutputChannel {
      * @param type type of output e.g. 'spk', 'sub', 'stereo-submix'
      * @param options supply coordinates or a description for the output here
      */
-    constructor(name: string, type: string, options?: {description?: string, coords?:AEDCoord}){
+    constructor(name: string, type: string, options?: { description?: string, coords?: AEDCoord }) {
 
         this.name = name;
         this.type = type;
 
-        if(options){
+        if (options) {
             this.description = options.description;
             this.coords = options.coords;
         }
@@ -300,18 +340,18 @@ export class OutputChannel {
     /**
      * Create a new OutputChannel from a plain Javascript Object
      */
-    static fromObject(obj: any): OutputChannel { 
+    static fromObject(obj: any): OutputChannel {
 
         let ret = new OutputChannel(obj.name, obj.type);
 
-        if(obj.coords)
+        if (obj.coords)
             Object.assign(ret.coords, obj.coords)
 
-        if(obj.description)
+        if (obj.description)
             ret.description = obj.description;
-            
-        
-        return ret; 
+
+
+        return ret;
     }
 }
 
@@ -341,121 +381,90 @@ export class ADD {
         return this;
     }
 
-    private validateProp(prop: any, validator: Function) : boolean;
-    private validateProp(prop: any, validator: string) : boolean;
-    private validateProp(prop: any, validator: any) : boolean {
-        if(typeof validator == 'string')
-            return typeof prop == validator;
-        else return validator(prop);
-    }
-
-    private assign_if_valid(from: Object, validator: any, ...prop: string[]){
-        let to = this;
-        this.assign_if_valid_recurse(to, from, validator, prop);
-
-    }
-
-    private assign_if_valid_recurse(me: Object, from: Object, validator: any, props: string[]){
-
-        if(props.length === 1){
-            if(from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator))
-                me[props[0]] = from[props[0]];
-
-        } else {
-
-            let nextp = props.shift();
-
-            if(from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')){
-
-                if(!me.hasOwnProperty(nextp))
-                    me[nextp] = {};
-
-                this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
-
-            }
-        }
-    }
-
     /**
      * Construct a new ADD
      * @param add 
      */
-    constructor(add?: any){
+    constructor(add?: any) {
 
-        let pobj : any = {};
+        let pobj: any = {};
 
-        if(typeof add == 'string' || add instanceof String)
+        if (typeof add == 'string' || add instanceof String)
             pobj = JSON.parse(add.toString());
         else if (add instanceof Object)
             pobj = add;
 
-        
+
 
         this.decoder = { filter: [], matrices: [], output: { channels: [], matrix: [] } };
 
-        if(add){
+        if (add) {
 
-            this.assign_if_valid(pobj, 'number', 'revision');
-            this.assign_if_valid(pobj, 'string', 'name');
-            this.assign_if_valid(pobj, 'string', 'author');
-            this.assign_if_valid(pobj, 'string', 'description');
-            this.assign_if_valid(pobj, 'string', 'date');
-            this.assign_if_valid(pobj, 'number', 'version');
+            assign_if_valid(this, pobj, 'number', 'revision');
+            assign_if_valid(this, pobj, 'string', 'name');
+            assign_if_valid(this, pobj, 'string', 'author');
+            assign_if_valid(this, pobj, 'string', 'description');
+            assign_if_valid(this, pobj, 'string', 'date');
+            assign_if_valid(this, pobj, 'number', 'version');
 
-            if(pobj.decoder){
+            if (pobj.decoder) {
 
-                if(pobj.decoder.filter)
+                if (pobj.decoder.filter)
                     this.decoder.filter = pobj.decoder.filter.map(obj => Filter.fromObject(obj));
 
-                if(pobj.decoder.matrices)
+                if (pobj.decoder.matrices)
                     this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
 
-                if(pobj.decoder.output.channels && pobj.decoder.output.matrix){
+                if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
                     this.decoder.output = {
                         channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
-                        matrix: pobj.decoder.output.matrix || []
-                    } 
+                        matrix: pobj.decoder.output.matrix || []
+                    }
                 }
-    
+
             }
         }
 
     }
 
-    export(){
+    export() {
 
-        if(!this.valid())
+        if (!this.valid())
             throw new Error('Cannot export invalid ADD');
-
-
 
         let export_obj = {
 
             name: this.name,
 
-            description: this.description || "created with the dotadd.js library",
-            author: this.author || "the dotadd library creators",
-            date: this.date || new Date(Date.now()).toISOString(),
-            revision: this.revision,
-            version: this.version || 0,
+            description: this.description,
 
-            decoder:{
+            author: this.author,
+
+            date: this.date,
+
+            revision: this.revision,
+
+            version: this.version,
+
+            decoder: {
 
                 filter: this.decoder.filter.map(flt => Filter.fromObject(flt)),
 
-                matrices: this.decoder.matrices.map(mat => { return {
-                    normalisation: mat.normalisation,
-                    input: mat.input,
-                    matrix: mat.matrix.map(chs => Array.from(chs))
-                }}),
+                matrices: this.decoder.matrices.map(mat => {
+                    return {
+                        normalisation: mat.normalisation,
+                        input: mat.input,
+                        matrix: mat.matrix.map(chs => Array.from(chs))
+                    }
+                }),
 
-                output:{
+                output: {
                     channels: this.decoder.output.channels.map(chan => OutputChannel.fromObject(chan)),
                     matrix: this.decoder.output.matrix.map(chan => Array.from(chan))
                 }
             },
 
-            serialize(){
+            serialize() {
                 return JSON.stringify(export_obj);
             }
 
@@ -467,18 +476,65 @@ export class ADD {
     setAuthor(author: string): ADD { return this._set('author', author); }
     setName(name: string): ADD { return this._set('name', name); }
     setDescription(desc: string): ADD { return this._set('description', desc); }
-    setDate(date: string|Date): ADD { return this._set('date', new Date(date).toISOString()); }
+    setDate(date: string | Date): ADD { return this._set('date', new Date(date).toISOString()); }
     setVersion(version: number): ADD { return this._set('version', version); }
 
-    valid() : boolean {
+    createDefaultMetadata() {
+
+        this.author = this.author || 'the dotadd library creators'
+
+        this.description = this.description || 'created with the dotadd.js library'
+
+        this.version = this.version || 0;
+
+        if (!this.dateValid())
+            this.date = new Date(Date.now()).toISOString();
+    }
+
+    repair(): void {
+
+        if (this.hasNoOutputs())
+            this.createDefaultSummedOutputs();
+
+        if (!this.valid())
+            this.createDefaultMetadata();
+
+        if (!this.valid()) {
+            this.decoder.output.channels = [];
+            this.decoder.output.matrix = [];
+            this.createDefaultSummedOutputs();
+        }
+
+    }
+
+    valid(): boolean {
+
+        if (!is_valid_string(this.name))
+            return false;
+
+        if (!is_valid_string(this.author))
+            return false;
+
+        if (!is_valid_string(this.description))
+            return false;
+
+        if (this.version && Number.parseInt(this.version.toString()) == NaN)
+            return false;
+
+        if (!this.dateValid())
+            return false;
+
+        if (!this.validateOutputs())
+            return false;
+
         return true;
     }
 
-    addMatrix(mat: Matrix) : void {
+    addMatrix(mat: Matrix): void {
         this.decoder.matrices.push(mat);
     }
 
-    addFilter(flt: Filter): void{
+    addFilter(flt: Filter): void {
         this.decoder.filter.push(flt);
     }
 
@@ -486,45 +542,89 @@ export class ADD {
         this.decoder.output.channels.push(out);
     }
 
-    maxAmbisonicOrder(): number{
+    maxAmbisonicOrder(): number {
         return Math.max(...this.decoder.matrices.map(mat => mat.ambisonicOrder()));
     }
 
-    totalMatrixOutputs(): number{
+    totalMatrixOutputs(): number {
         return this.decoder.matrices.reduce((val, mat) => val + mat.numChannels(), 0);
     }
 
-    maxMatrixOutputs(): number{
+    maxMatrixOutputs(): number {
         return Math.max(...this.decoder.matrices.map(mat => mat.numChannels()));
     }
 
-    createDefaultOutputs(): void{
+    createDefaultOutputs(): void {
 
         this.decoder.matrices.forEach((mat, midx) => {
 
-            for(let i = 0; i < mat.numChannels(); ++i){
+            for (let i = 0; i < mat.numChannels(); ++i) {
 
                 this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${midx}_${i}`, 'default'));
 
                 let arr: number[] = new Array(this.totalMatrixOutputs()).fill(0);
-                arr[i + ((midx)? this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+                arr[i + ((midx) ? this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
 
                 this.decoder.output.matrix.push(arr);
             }
         });
     }
 
-    createDefaultSummedOutputs(): void{
+    createDefaultSummedOutputs(): void {
 
-        for(let i = 0; i < this.maxMatrixOutputs(); ++i){
+        for (let i = 0; i < this.maxMatrixOutputs(); ++i) {
             this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${i}`, 'default'));
             this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
         }
 
         this.decoder.matrices.forEach((mat, midx) => {
-            for(let i = 0; i < mat.numChannels(); ++i)
-                this.decoder.output.matrix[i][(i + ((midx)? this.decoder.matrices[midx - 1].numChannels() : 0))] = 1.0;
+            for (let i = 0; i < mat.numChannels(); ++i)
+                this.decoder.output.matrix[i][(i + ((midx) ? this.decoder.matrices[midx - 1].numChannels() : 0))] = 1.0;
         });
+    }
+
+    dateValid(): boolean {
+        return !Number.isNaN(Date.parse(this.date));
+    }
+
+    hasNoOutputs() {
+        return this.decoder.output.channels.length == 0
+            || this.decoder.output.matrix.length == 0;
+    }
+
+    validateOutputs(): boolean {
+
+        if (this.hasNoOutputs())
+            return false;
+
+        if (!(this.decoder.output.channels.length
+            == this.decoder.output.matrix.length))
+            return false;
+
+        let inputs = this.decoder.output.matrix[0].length;
+        let valid = true;
+
+        let mixer_inputs = this.decoder.output.matrix.forEach(channel => {
+            if (channel.length != inputs)
+                valid = false;
+        });
+
+        if (!valid)
+            return false;
+
+        if (this.totalMatrixOutputs() != inputs)
+            return false;
+
+        return true;
+
+    }
+
+    validateFilters(){
+
+    }
+
+    validateDecoders(){
+        
     }
 
 }
