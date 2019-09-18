@@ -1,6 +1,6 @@
 {
   "name": "dotadd.js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "read dotadd files",
   "main": "cjs/dotadd.js",
   "browser": "browser/dotadd.js",
