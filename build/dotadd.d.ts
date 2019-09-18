@@ -39,6 +39,10 @@ export declare const ACN: {
      * @param index Ambisonic Index (n)
      */
     acn(order: number, index: number): number;
+    /**
+     * Calculate the maximum channels needed for a given ambisonic order. Returns (order+1)^2
+     */
+    maxChannels(order: number): number;
 };
 /**
  * The dotadd Matrix class. Is holds the decoding matrix coefficents and a field

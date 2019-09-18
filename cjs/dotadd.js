@@ -100,6 +100,13 @@ const ACN = {
    */
   acn(order, index) {
     return Math.pow(order, 2) * order + index;
+  },
+
+  /**
+   * Calculate the maximum channels needed for a given ambisonic order. Returns (order+1)^2
+   */
+  maxChannels(order) {
+    return Math.pow(order + 1, 2);
   }
 
 };
