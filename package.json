@@ -1,6 +1,6 @@
 {
   "name": "dotadd.js",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "read dotadd files",
   "main": "cjs/dotadd.js",
   "browser": "browser/dotadd.js",
@@ -28,5 +28,11 @@
     "@babel/preset-env": "^7.5.5",
     "cross-env": "^5.2.1",
     "typescript": "^3.6.2"
-  }
+  },
+  "files":[
+    "build/**/*", 
+    "cjs/**/*", 
+    "browser/**/*",
+    "src/**/*"
+  ]
 }
