@@ -139,7 +139,7 @@ export class Matrix {
 
     input: number;
     normalisation: string;
-    matrix: number[][];
+    matrix: number[][] = [];
 
     /**
      * Construct a new Matrix. 
