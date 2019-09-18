@@ -14,26 +14,25 @@ function validateProp(prop: any, validator: any): boolean {
 
 function assign_if_valid(me: any, from: Object, validator: any, ...prop: string[]) {
     let to = me;
-    this.assign_if_valid_recurse(to, from, validator, prop);
-
+    assign_if_valid_recurse(to, from, validator, prop);
 }
 
 function assign_if_valid_recurse(me: Object, from: Object, validator: any, props: string[]) {
 
     if (props.length === 1) {
-        if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator))
+        if (from.hasOwnProperty(props[0]) && validateProp(from[props[0]], validator))
             me[props[0]] = from[props[0]];
 
     } else {
 
         let nextp = props.shift();
 
-        if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
+        if (from.hasOwnProperty(nextp) && validateProp(from[nextp], 'object')) {
 
             if (!me.hasOwnProperty(nextp))
                 me[nextp] = {};
 
-            this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
+            assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
 
         }
     }
@@ -61,15 +60,23 @@ export class Filter {
     }
 
     isLowpass() {
-        return this.lo == undefined && this.hi != undefined;
+        return this.lo == null && this.hi != null;
     }
 
     isHighpass() {
-        return this.hi == undefined && this.lo != undefined;
+        return this.hi == null && this.lo != null;
     }
 
     isBandpass() {
-        return this.hi != undefined && this.lo != undefined;
+        return this.hi != null && this.lo != null;
+    }
+
+    static makeLowpass(freq: number){
+        return new Filter(freq);
+    }
+
+    static makeHighpass(freq: number){
+        return new Filter(null, freq)
     }
 
     static fromObject(obj: any) {
@@ -274,6 +281,21 @@ export class Matrix {
         return this;
     }
 
+    valid(): boolean {
+        
+        if(!this.matrix.length)
+            return false;
+
+        let len = this.matrix[0].length;
+
+        for(let ch of this.matrix){
+            if(ch.length != len)
+                return false;
+        }
+
+        return true;
+    }
+
     static fromObject(obj: any): Matrix {
         return new Matrix(obj.input, obj.normalisation, obj.matrix);
     }
@@ -383,6 +405,8 @@ export class ADD {
         }
     };
 
+    inv_reasons: string[] = [];
+
     private _set(prop: string, val: any): ADD {
         this[prop] = val;
         return this;
@@ -422,10 +446,14 @@ export class ADD {
                 if (pobj.decoder.matrices)
                     this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
 
-                if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
-                    this.decoder.output = {
-                        channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
-                        matrix: pobj.decoder.output.matrix || []
+                if(pobj.decoder.output) {
+
+                    if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+
+                        this.decoder.output = {
+                            channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
+                            matrix: pobj.decoder.output.matrix || []
+                        }
                     }
                 }
 
@@ -507,6 +535,9 @@ export class ADD {
             this.createDefaultMetadata();
 
         if (!this.valid()) {
+
+            if(this.decoder.output.channels.length != this.totalMatrixOutputs())
+
             this.decoder.output.channels = [];
             this.decoder.output.matrix = [];
             this.createDefaultSummedOutputs();
@@ -516,23 +547,28 @@ export class ADD {
 
     valid(): boolean {
 
+        this.clearInvMessageCache();
+
         if (!is_valid_string(this.name))
-            return false;
+            return this.invalidateWith('Missing or invalid "name" field');
 
         if (!is_valid_string(this.author))
-            return false;
+            return this.invalidateWith('Missing or invalid "author" field');
 
         if (!is_valid_string(this.description))
-            return false;
+            return this.invalidateWith('Missing or invalid "author" field');
 
         if (this.version && Number.parseInt(this.version.toString()) == NaN)
-            return false;
+            return this.invalidateWith('Missing or invalid "version" field');
 
         if (!this.dateValid())
-            return false;
+            return this.invalidateWith('Missing or invalid "date" field');
+
+        if (!this.validateDecodingMatrices())
+            return this.invalidateWith('Invalid decoding matrix configuration');
 
         if (!this.validateOutputs())
-            return false;
+            return this.invalidateWith('Invalid output configuration');
 
         return true;
     }
@@ -545,8 +581,29 @@ export class ADD {
         this.decoder.filter.push(flt);
     }
 
-    addOutput(out: OutputChannel): void {
+    addOutput(out: OutputChannel){
         this.decoder.output.channels.push(out);
+    }
+
+    addOutputAndFillMatrix(out: OutputChannel, gain: number): void {
+
+        if(gain == null)
+            gain = 1.;
+
+        this.decoder.output.channels.push(out);
+
+        let channel_num = this.decoder.output.channels.length - 1;
+
+        this.decoder.output.matrix[channel_num] 
+            = new Array(this.decoder.output.channels.length).fill(0);
+
+        this.decoder.output.matrix[channel_num][channel_num] = gain;
+
+        this.decoder.output.matrix.forEach(ch => {
+            while(ch.length != this.decoder.output.channels.length)
+                ch.push(0);
+        });
+
     }
 
     maxAmbisonicOrder(): number {
@@ -557,8 +614,17 @@ export class ADD {
         return this.decoder.matrices.reduce((val, mat) => val + mat.numChannels(), 0);
     }
 
-    maxMatrixOutputs(): number {
+    maxMatrixOutputCount(): number {
         return Math.max(...this.decoder.matrices.map(mat => mat.numChannels()));
+    }
+
+    numOutputs(): number{
+        return this.decoder.output.channels.length;
+    }
+
+    hasNoOutputs() {
+        return this.decoder.output.channels.length == 0
+            || this.decoder.output.matrix.length == 0;
     }
 
     createDefaultOutputs(): void {
@@ -579,7 +645,7 @@ export class ADD {
 
     createDefaultSummedOutputs(): void {
 
-        for (let i = 0; i < this.maxMatrixOutputs(); ++i) {
+        for (let i = 0; i < this.maxMatrixOutputCount(); ++i) {
             this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${i}`, 'default'));
             this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
         }
@@ -590,23 +656,84 @@ export class ADD {
         });
     }
 
-    dateValid(): boolean {
-        return !Number.isNaN(Date.parse(this.date));
+    createDefaultOutputMatrix(){
+
+        this.decoder.output.matrix.length = 0;
+
+        for(let i = 0; i < this.numOutputs(); ++i){
+            this.decoder.output.matrix.push(new Array(this.numOutputs()).fill(0));
+            this.decoder.output.matrix[this.decoder.output.matrix.length - 1]
+                                        [this.decoder.output.matrix.length - 1] = 1.;
+        }
+
     }
 
-    hasNoOutputs() {
-        return this.decoder.output.channels.length == 0
-            || this.decoder.output.matrix.length == 0;
+    refitOutputChannels(){
+
+        if(this.numOutputs() < this.totalMatrixOutputs()){
+            while(this.numOutputs() != this.totalMatrixOutputs())
+                this.addOutput(new OutputChannel('DEFAULT', 'default'));
+        } else if(this.numOutputs() > this.totalMatrixOutputs()){
+            while(this.numOutputs() != this.totalMatrixOutputs())
+                this.decoder.output.channels.pop();
+        }
+
+    }
+
+    refitOutputMatrix(){
+
+        let ol = this.decoder.output.matrix.length;
+
+        if(ol > this.numOutputs()){
+
+            this.decoder.output.matrix.length = this.numOutputs();
+
+            this.decoder.output.matrix
+                .map(ch => { 
+                    ch.length = this.numOutputs(); 
+                    return ch; 
+                })
+
+        } else if(ol < this.numOutputs()) {
+            
+            while(this.decoder.output.matrix.length != this.numOutputs())
+                this.decoder.output.matrix.push([]);
+
+            this.decoder.output.matrix.map((ch, i) => {
+
+                let l = ch.length;
+
+                while(ch.length != this.numOutputs())
+                    ch.push(0);
+
+                ch[i] = 1;
+
+            });
+
+        }
+    }
+
+    invalidateWith(reason: string): boolean {
+        this.inv_reasons.push(reason);
+        return false;
+    }
+
+    clearInvMessageCache(){
+        this.inv_reasons.length = 0;
+    }
+
+    dateValid(): boolean {
+        return !Number.isNaN(Date.parse(this.date));
     }
 
     validateOutputs(): boolean {
 
         if (this.hasNoOutputs())
-            return false;
+            return this.invalidateWith('No outputs');
 
         if (!(this.decoder.output.channels.length
             == this.decoder.output.matrix.length))
-            return false;
+            return this.invalidateWith('Output matrix dimensions do not match output channel count');
 
         let inputs = this.decoder.output.matrix[0].length;
         let valid = true;
@@ -617,21 +744,31 @@ export class ADD {
         });
 
         if (!valid)
-            return false;
+            return this.invalidateWith('Irregular output matrix');
 
         if (this.totalMatrixOutputs() != inputs)
-            return false;
+            return this.invalidateWith('Total Matrix output count does not match output channel count');
 
         return true;
 
     }
 
-    validateFilters(){
+    validateDecodingMatrices(){
 
-    }
+        if(!this.decoder.matrices.length)
+            return this.invalidateWith('No decoding matrices');
 
-    validateDecoders(){
-        
-    }
+        for (let i in this.decoder.filter) {
+            if(this.decoder.matrices.find(m => m.input == Number.parseInt(i)) == undefined)
+                return this.invalidateWith('Missing matrix for filter output ' + i);
+        }
+
+        for(let i in this.decoder.matrices){
+            if(!this.decoder.matrices[i].valid())
+                return this.invalidateWith('Invalid matrix #' + i);
+        }
+
+        return true;
+    }   
 
 }

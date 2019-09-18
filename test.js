@@ -1,20 +1,17 @@
-const { ADD, Matrix, Normalisation, ACN, Filter } = require('./cjs/dotadd');
-const fs = require('fs');
+const {ADD, OutputChannel, Matrix} = require('./cjs/dotadd');
 
+let add = new ADD();
 
-let b = new ADD();
+add.setName('Test Decoder');
 
-b.setName('Test Decoder')
+add.createDefaultMetadata();
 
-b.addMatrix(
-    new Matrix(0,
-        Normalisation.SN3D,
-        [
-            [1, 0, 0.6, 0],
-            [1, 0, 0.6, 0],
-            [1, 0, 0.6, 0]
-        ]));
+add.addMatrix(new Matrix(0, 'n3d', [[1,0,0,0]]));
 
-b.repair();
+add.addOutput(new OutputChannel('Test Output', 'spk'));
 
-console.log(JSON.stringify(b.export(), null, 4));
+add.createDefaultOutputMatrix();
+
+add.repair();
+
+process.exit(add.valid()? 0 : 1);

@@ -49,18 +49,18 @@
       prop[_key - 3] = arguments[_key];
     }
 
-    this.assign_if_valid_recurse(to, from, validator, prop);
+    assign_if_valid_recurse(to, from, validator, prop);
   }
 
   function assign_if_valid_recurse(me, from, validator, props) {
     if (props.length === 1) {
-      if (from.hasOwnProperty(props[0]) && this.validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
+      if (from.hasOwnProperty(props[0]) && validateProp(from[props[0]], validator)) me[props[0]] = from[props[0]];
     } else {
       var nextp = props.shift();
 
-      if (from.hasOwnProperty(nextp) && this.validateProp(from[nextp], 'object')) {
+      if (from.hasOwnProperty(nextp) && validateProp(from[nextp], 'object')) {
         if (!me.hasOwnProperty(nextp)) me[nextp] = {};
-        this.assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
+        assign_if_valid_recurse(me[nextp], from[nextp], validator, props);
       }
     }
   }
@@ -88,19 +88,29 @@
     _createClass(Filter, [{
       key: "isLowpass",
       value: function isLowpass() {
-        return this.lo == undefined && this.hi != undefined;
+        return this.lo == null && this.hi != null;
       }
     }, {
       key: "isHighpass",
       value: function isHighpass() {
-        return this.hi == undefined && this.lo != undefined;
+        return this.hi == null && this.lo != null;
       }
     }, {
       key: "isBandpass",
       value: function isBandpass() {
-        return this.hi != undefined && this.lo != undefined;
+        return this.hi != null && this.lo != null;
       }
     }], [{
+      key: "makeLowpass",
+      value: function makeLowpass(freq) {
+        return new Filter(freq);
+      }
+    }, {
+      key: "makeHighpass",
+      value: function makeHighpass(freq) {
+        return new Filter(null, freq);
+      }
+    }, {
       key: "fromObject",
       value: function fromObject(obj) {
         return new Filter(obj.hi, obj.lo);
@@ -322,6 +332,37 @@
         this.normalisation = normalisation;
         return this;
       }
+    }, {
+      key: "valid",
+      value: function valid() {
+        if (!this.matrix.length) return false;
+        var len = this.matrix[0].length;
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = this.matrix[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var ch = _step2.value;
+            if (ch.length != len) return false;
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        return true;
+      }
     }], [{
       key: "fromObject",
       value: function fromObject(obj) {
@@ -428,6 +469,7 @@
       _classCallCheck(this, ADD);
 
       this.revision = 0;
+      this.inv_reasons = [];
       var pobj = {};
       if (typeof add == 'string' || add instanceof String) pobj = JSON.parse(add.toString());else if (add instanceof Object) pobj = add;
       this.decoder = {
@@ -455,13 +497,15 @@
             return Matrix.fromObject(mat);
           });
 
-          if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
-            this.decoder.output = {
-              channels: pobj.decoder.output.channels.map(function (channel) {
-                return OutputChannel.fromObject(channel);
-              }),
-              matrix: pobj.decoder.output.matrix || []
-            };
+          if (pobj.decoder.output) {
+            if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+              this.decoder.output = {
+                channels: pobj.decoder.output.channels.map(function (channel) {
+                  return OutputChannel.fromObject(channel);
+                }),
+                matrix: pobj.decoder.output.matrix || []
+              };
+            }
           }
         }
       }
@@ -552,7 +596,7 @@
         if (!this.valid()) this.createDefaultMetadata();
 
         if (!this.valid()) {
-          this.decoder.output.channels = [];
+          if (this.decoder.output.channels.length != this.totalMatrixOutputs()) this.decoder.output.channels = [];
           this.decoder.output.matrix = [];
           this.createDefaultSummedOutputs();
         }
@@ -560,12 +604,14 @@
     }, {
       key: "valid",
       value: function valid() {
-        if (!is_valid_string(this.name)) return false;
-        if (!is_valid_string(this.author)) return false;
-        if (!is_valid_string(this.description)) return false;
-        if (this.version && Number.parseInt(this.version.toString()) == NaN) return false;
-        if (!this.dateValid()) return false;
-        if (!this.validateOutputs()) return false;
+        this.clearInvMessageCache();
+        if (!is_valid_string(this.name)) return this.invalidateWith('Missing or invalid "name" field');
+        if (!is_valid_string(this.author)) return this.invalidateWith('Missing or invalid "author" field');
+        if (!is_valid_string(this.description)) return this.invalidateWith('Missing or invalid "author" field');
+        if (this.version && Number.parseInt(this.version.toString()) == NaN) return this.invalidateWith('Missing or invalid "version" field');
+        if (!this.dateValid()) return this.invalidateWith('Missing or invalid "date" field');
+        if (!this.validateDecodingMatrices()) return this.invalidateWith('Invalid decoding matrix configuration');
+        if (!this.validateOutputs()) return this.invalidateWith('Invalid output configuration');
         return true;
       }
     }, {
@@ -584,6 +630,22 @@
         this.decoder.output.channels.push(out);
       }
     }, {
+      key: "addOutputAndFillMatrix",
+      value: function addOutputAndFillMatrix(out, gain) {
+        var _this = this;
+
+        if (gain == null) gain = 1.;
+        this.decoder.output.channels.push(out);
+        var channel_num = this.decoder.output.channels.length - 1;
+        this.decoder.output.matrix[channel_num] = new Array(this.decoder.output.channels.length).fill(0);
+        this.decoder.output.matrix[channel_num][channel_num] = gain;
+        this.decoder.output.matrix.forEach(function (ch) {
+          while (ch.length != _this.decoder.output.channels.length) {
+            ch.push(0);
+          }
+        });
+      }
+    }, {
       key: "maxAmbisonicOrder",
       value: function maxAmbisonicOrder() {
         return Math.max.apply(Math, _toConsumableArray(this.decoder.matrices.map(function (mat) {
@@ -598,48 +660,16 @@
         }, 0);
       }
     }, {
-      key: "maxMatrixOutputs",
-      value: function maxMatrixOutputs() {
+      key: "maxMatrixOutputCount",
+      value: function maxMatrixOutputCount() {
         return Math.max.apply(Math, _toConsumableArray(this.decoder.matrices.map(function (mat) {
           return mat.numChannels();
         })));
       }
     }, {
-      key: "createDefaultOutputs",
-      value: function createDefaultOutputs() {
-        var _this = this;
-
-        this.decoder.matrices.forEach(function (mat, midx) {
-          for (var i = 0; i < mat.numChannels(); ++i) {
-            _this.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(midx, "_").concat(i), 'default'));
-
-            var arr = new Array(_this.totalMatrixOutputs()).fill(0);
-            arr[i + (midx ? _this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
-
-            _this.decoder.output.matrix.push(arr);
-          }
-        });
-      }
-    }, {
-      key: "createDefaultSummedOutputs",
-      value: function createDefaultSummedOutputs() {
-        var _this2 = this;
-
-        for (var i = 0; i < this.maxMatrixOutputs(); ++i) {
-          this.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(i), 'default'));
-          this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
-        }
-
-        this.decoder.matrices.forEach(function (mat, midx) {
-          for (var _i = 0; _i < mat.numChannels(); ++_i) {
-            _this2.decoder.output.matrix[_i][_i + (midx ? _this2.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
-          }
-        });
-      }
-    }, {
-      key: "dateValid",
-      value: function dateValid() {
-        return !Number.isNaN(Date.parse(this.date));
+      key: "numOutputs",
+      value: function numOutputs() {
+        return this.decoder.output.channels.length;
       }
     }, {
       key: "hasNoOutputs",
@@ -647,25 +677,146 @@
         return this.decoder.output.channels.length == 0 || this.decoder.output.matrix.length == 0;
       }
     }, {
+      key: "createDefaultOutputs",
+      value: function createDefaultOutputs() {
+        var _this2 = this;
+
+        this.decoder.matrices.forEach(function (mat, midx) {
+          for (var i = 0; i < mat.numChannels(); ++i) {
+            _this2.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(midx, "_").concat(i), 'default'));
+
+            var arr = new Array(_this2.totalMatrixOutputs()).fill(0);
+            arr[i + (midx ? _this2.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+
+            _this2.decoder.output.matrix.push(arr);
+          }
+        });
+      }
+    }, {
+      key: "createDefaultSummedOutputs",
+      value: function createDefaultSummedOutputs() {
+        var _this3 = this;
+
+        for (var i = 0; i < this.maxMatrixOutputCount(); ++i) {
+          this.decoder.output.channels.push(new OutputChannel("DEFAULT_".concat(i), 'default'));
+          this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
+        }
+
+        this.decoder.matrices.forEach(function (mat, midx) {
+          for (var _i = 0; _i < mat.numChannels(); ++_i) {
+            _this3.decoder.output.matrix[_i][_i + (midx ? _this3.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
+          }
+        });
+      }
+    }, {
+      key: "createDefaultOutputMatrix",
+      value: function createDefaultOutputMatrix() {
+        this.decoder.output.matrix.length = 0;
+
+        for (var i = 0; i < this.numOutputs(); ++i) {
+          this.decoder.output.matrix.push(new Array(this.numOutputs()).fill(0));
+          this.decoder.output.matrix[this.decoder.output.matrix.length - 1][this.decoder.output.matrix.length - 1] = 1.;
+        }
+      }
+    }, {
+      key: "refitOutputChannels",
+      value: function refitOutputChannels() {
+        if (this.numOutputs() < this.totalMatrixOutputs()) {
+          while (this.numOutputs() != this.totalMatrixOutputs()) {
+            this.addOutput(new OutputChannel('DEFAULT', 'default'));
+          }
+        } else if (this.numOutputs() > this.totalMatrixOutputs()) {
+          while (this.numOutputs() != this.totalMatrixOutputs()) {
+            this.decoder.output.channels.pop();
+          }
+        }
+      }
+    }, {
+      key: "refitOutputMatrix",
+      value: function refitOutputMatrix() {
+        var _this4 = this;
+
+        var ol = this.decoder.output.matrix.length;
+
+        if (ol > this.numOutputs()) {
+          this.decoder.output.matrix.length = this.numOutputs();
+          this.decoder.output.matrix.map(function (ch) {
+            ch.length = _this4.numOutputs();
+            return ch;
+          });
+        } else if (ol < this.numOutputs()) {
+          while (this.decoder.output.matrix.length != this.numOutputs()) {
+            this.decoder.output.matrix.push([]);
+          }
+
+          this.decoder.output.matrix.map(function (ch, i) {
+            var l = ch.length;
+
+            while (ch.length != _this4.numOutputs()) {
+              ch.push(0);
+            }
+
+            ch[i] = 1;
+          });
+        }
+      }
+    }, {
+      key: "invalidateWith",
+      value: function invalidateWith(reason) {
+        this.inv_reasons.push(reason);
+        return false;
+      }
+    }, {
+      key: "clearInvMessageCache",
+      value: function clearInvMessageCache() {
+        this.inv_reasons.length = 0;
+      }
+    }, {
+      key: "dateValid",
+      value: function dateValid() {
+        return !Number.isNaN(Date.parse(this.date));
+      }
+    }, {
       key: "validateOutputs",
       value: function validateOutputs() {
-        if (this.hasNoOutputs()) return false;
-        if (!(this.decoder.output.channels.length == this.decoder.output.matrix.length)) return false;
+        if (this.hasNoOutputs()) return this.invalidateWith('No outputs');
+        if (!(this.decoder.output.channels.length == this.decoder.output.matrix.length)) return this.invalidateWith('Output matrix dimensions do not match output channel count');
         var inputs = this.decoder.output.matrix[0].length;
         var valid = true;
         var mixer_inputs = this.decoder.output.matrix.forEach(function (channel) {
           if (channel.length != inputs) valid = false;
         });
-        if (!valid) return false;
-        if (this.totalMatrixOutputs() != inputs) return false;
+        if (!valid) return this.invalidateWith('Irregular output matrix');
+        if (this.totalMatrixOutputs() != inputs) return this.invalidateWith('Total Matrix output count does not match output channel count');
         return true;
       }
     }, {
-      key: "validateFilters",
-      value: function validateFilters() {}
-    }, {
-      key: "validateDecoders",
-      value: function validateDecoders() {}
+      key: "validateDecodingMatrices",
+      value: function validateDecodingMatrices() {
+        var _this5 = this;
+
+        if (!this.decoder.matrices.length) return this.invalidateWith('No decoding matrices');
+
+        var _loop = function _loop(i) {
+          if (_this5.decoder.matrices.find(function (m) {
+            return m.input == Number.parseInt(i);
+          }) == undefined) return {
+            v: _this5.invalidateWith('Missing matrix for filter output ' + i)
+          };
+        };
+
+        for (var i in this.decoder.filter) {
+          var _ret = _loop(i);
+
+          if (_typeof(_ret) === "object") return _ret.v;
+        }
+
+        for (var i in this.decoder.matrices) {
+          if (!this.decoder.matrices[i].valid()) return this.invalidateWith('Invalid matrix #' + i);
+        }
+
+        return true;
+      }
     }]);
 
     return ADD;

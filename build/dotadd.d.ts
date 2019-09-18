@@ -11,6 +11,8 @@ export declare class Filter {
     isLowpass(): boolean;
     isHighpass(): boolean;
     isBandpass(): boolean;
+    static makeLowpass(freq: number): Filter;
+    static makeHighpass(freq: number): Filter;
     static fromObject(obj: any): Filter;
     lo: number;
     hi: number;
@@ -105,6 +107,7 @@ export declare class Matrix {
      * @param normalisation the new normalisation type ('n3d' or 'sn3d')
      */
     renormalizeTo(normalisation: string): this;
+    valid(): boolean;
     static fromObject(obj: any): Matrix;
 }
 /**
@@ -174,6 +177,7 @@ export declare class ADD {
             matrix: number[][];
         };
     };
+    inv_reasons: string[];
     private _set;
     /**
      * Construct a new ADD
@@ -212,15 +216,21 @@ export declare class ADD {
     addMatrix(mat: Matrix): void;
     addFilter(flt: Filter): void;
     addOutput(out: OutputChannel): void;
+    addOutputAndFillMatrix(out: OutputChannel, gain: number): void;
     maxAmbisonicOrder(): number;
     totalMatrixOutputs(): number;
-    maxMatrixOutputs(): number;
+    maxMatrixOutputCount(): number;
+    numOutputs(): number;
+    hasNoOutputs(): boolean;
     createDefaultOutputs(): void;
     createDefaultSummedOutputs(): void;
+    createDefaultOutputMatrix(): void;
+    refitOutputChannels(): void;
+    refitOutputMatrix(): void;
+    invalidateWith(reason: string): boolean;
+    clearInvMessageCache(): void;
     dateValid(): boolean;
-    hasNoOutputs(): boolean;
     validateOutputs(): boolean;
-    validateFilters(): void;
-    validateDecoders(): void;
+    validateDecodingMatrices(): boolean;
 }
 //# sourceMappingURL=dotadd.d.ts.map
