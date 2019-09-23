@@ -293,6 +293,9 @@ export class Matrix {
                 return false;
         }
 
+        if(!(this.normalisation == 'n3d' || this.normalisation == 'sn3d'))
+            return false;
+
         return true;
     }
 
@@ -374,7 +377,7 @@ export class OutputChannel {
         let ret = new OutputChannel(obj.name, obj.type);
 
         if (obj.coords)
-            Object.assign(ret.coords, obj.coords)
+            ret.coords = new AEDCoord(obj.coords.a, obj.coords.e, obj.coords.d);
 
         if (obj.description)
             ret.description = obj.description;
