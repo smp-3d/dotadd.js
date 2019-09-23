@@ -120,7 +120,7 @@ export const ACN = {
      * @param index Ambisonic Index (n)
      */
     acn(order: number, index: number) {
-        return Math.pow(order, 2) * order + index;
+        return Math.pow(order, 2) + order + index;
     },
 
     /**
@@ -539,11 +539,11 @@ export class ADD {
 
         if (!this.valid()) {
 
-            if(this.decoder.output.channels.length != this.totalMatrixOutputs())
-
-            this.decoder.output.channels = [];
-            this.decoder.output.matrix = [];
-            this.createDefaultSummedOutputs();
+            if(this.decoder.output.channels.length != this.totalMatrixOutputs()){
+                this.decoder.output.channels = [];
+                this.decoder.output.matrix = [];
+                this.createDefaultSummedOutputs();
+            }
         }
 
     }
