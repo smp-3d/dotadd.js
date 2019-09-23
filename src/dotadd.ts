@@ -537,9 +537,9 @@ export class ADD {
         if (!this.valid()) {
 
             if(this.decoder.output.channels.length != this.totalMatrixOutputs()){
-            this.decoder.output.channels = [];
-            this.decoder.output.matrix = [];
-            this.createDefaultSummedOutputs();
+                this.decoder.output.channels = [];
+                this.decoder.output.matrix = [];
+                this.createDefaultSummedOutputs();
             }
         }
 
