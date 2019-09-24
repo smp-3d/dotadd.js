@@ -445,7 +445,7 @@ export class ADD {
 
                 if(pobj.decoder.output) {
 
-                    if (pobj.decoder.output.channels && pobj.decoder.output.matrix) {
+                    if (pobj.decoder.output.channels && pobj.decoder.output.summing_matrix) {
 
                         this.decoder.output = {
                             channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
