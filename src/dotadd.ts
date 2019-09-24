@@ -48,7 +48,10 @@ export class Filter {
      * @param high beginning of the high frequency stopbband can be null
      * @param low beginning of the high frequency stopbband can be null or omitted
      */
-    constructor(high: number, low?: number) {
+    constructor(name: string, matrix: number, high: number, low?: number) {
+
+        this.name = name;
+
         if ((high == null) && (low == null))
             throw new Error('Cannot construct a Filterband without frequencies');
 
@@ -71,23 +74,25 @@ export class Filter {
         return this.hi != null && this.lo != null;
     }
 
-    static makeLowpass(freq: number){
-        return new Filter(freq);
+    static makeLowpass(name: string, matrix: number, freq: number){
+        return new Filter(name, matrix, freq);
     }
 
-    static makeHighpass(freq: number){
-        return new Filter(null, freq)
+    static makeHighpass(name: string, matrix: number, freq: number){
+        return new Filter(name, matrix, null, freq);
     }
 
     static fromObject(obj: any) {
-        return new Filter(obj.hi, obj.lo);
+        return new Filter(obj.name, obj.matrix, obj.hi, obj.lo);
     }
 
+    name: string;
+    matrix: number;
     lo: number;
     hi: number;
 }
 
-export const Normalisation = Object.freeze({
+export const Normalization = Object.freeze({
     N3D: 'n3d',
     SN3D: 'sn3d'
 });
@@ -137,8 +142,8 @@ export const ACN = {
  */
 export class Matrix {
 
-    input: number;
-    normalisation: string;
+    normalization: string;
+    weights: string;
     matrix: number[][] = [];
 
     /**
@@ -146,11 +151,9 @@ export class Matrix {
      * @param {number} input the input band the matrix will receive signal from
      * @param {number[][]} channels an array of array of coefficents for the output channels of the matrix.
      */
-    constructor(input: number, normalisation: string, channels: number[][]) {
+    constructor(normalization: string, channels: number[][]) {
 
-        this.input = input;
-
-        this.normalisation = normalisation.toLowerCase();
+        this.normalization = normalization.toLowerCase();
 
         if (channels && channels.length) {
 
@@ -164,21 +167,6 @@ export class Matrix {
             this.matrix = channels;
         }
 
-    }
-
-    /**
-     * Set the input band the Matrix will receive signal from
-     * @param {Number} input 
-     */
-    setInput(input: number) {
-        this.input = input;
-    }
-
-    /**
-     * @returns {Number} the input channel this Matrix will receive signal from
-     */
-    getInput(): number {
-        return this.input;
     }
 
     /**
@@ -238,28 +226,28 @@ export class Matrix {
      * @param normalisation the Normalisation type ('n3d' or 'sn3d')
      */
     setNormalisation(normalisation: string): void {
-        this.normalisation = normalisation.toLowerCase();
+        this.normalization = normalisation.toLowerCase();
     }
 
     /**
      * 
      */
     getNormalisation(): string {
-        return this.normalisation;
+        return this.normalization;
     }
 
     /**
      * change the normalisation of the matrix values
      * @param normalisation the new normalisation type ('n3d' or 'sn3d')
      */
-    renormalizeTo(normalisation: string) {
+    renormalizeTo(normalization: string) {
 
-        normalisation = normalisation.toLowerCase();
+        normalization = normalization.toLowerCase();
 
-        if (this.normalisation == normalisation)
+        if (this.normalization == normalization)
             return;
 
-        if (normalisation === Normalisation.N3D) {
+        if (normalization === Normalization.N3D) {
 
             this.matrix.forEach((ch) => {
                 ch.forEach((coeff, cidx) => {
@@ -268,7 +256,7 @@ export class Matrix {
             })
 
         }
-        else if (normalisation === Normalisation.SN3D) {
+        else if (normalization === Normalization.SN3D) {
             this.matrix.forEach((ch) => {
                 ch.forEach((coeff, cidx) => {
                     ch[cidx] = coeff / (Math.sqrt(2 * ACN.order(cidx) + 1));
@@ -276,9 +264,13 @@ export class Matrix {
             })
         }
 
-        this.normalisation = normalisation;
+        this.normalization = normalization;
 
         return this;
+    }
+
+    setWeighting(weighting: string){
+        this.weights = weighting.toLowerCase();
     }
 
     valid(): boolean {
@@ -293,14 +285,19 @@ export class Matrix {
                 return false;
         }
 
-        if(!(this.normalisation == 'n3d' || this.normalisation == 'sn3d'))
+        if(!(this.normalization == 'n3d' || this.normalization == 'sn3d'))
             return false;
+
+        if(this.weights){
+            if(!(this.weights == "inhpase" || this.weights == "maxre"))
+                return false;
+        }
 
         return true;
     }
 
     static fromObject(obj: any): Matrix {
-        return new Matrix(obj.input, obj.normalisation, obj.matrix);
+        return new Matrix(obj.input, obj.normalization);
     }
 }
 
@@ -341,15 +338,13 @@ export class OutputChannel {
     name: string;
 
     /**
-     * short description for the output
-     */
-    description: string;
-
-    /**
      * type of output, e.g. 'spk', 'sub', 'stereo-submix'
      */
     type: string;
 
+    /**
+     * 
+     */
     coords: AEDCoord;
 
     /**
@@ -358,15 +353,13 @@ export class OutputChannel {
      * @param type type of output e.g. 'spk', 'sub', 'stereo-submix'
      * @param options supply coordinates or a description for the output here
      */
-    constructor(name: string, type: string, options?: { description?: string, coords?: AEDCoord }) {
+    constructor(name: string, type: string, coords?: AEDCoord) {
 
         this.name = name;
         this.type = type;
 
-        if (options) {
-            this.description = options.description;
-            this.coords = options.coords;
-        }
+        if (coords) 
+            this.coords = coords;
     }
 
     /**
@@ -378,10 +371,6 @@ export class OutputChannel {
 
         if (obj.coords)
             ret.coords = new AEDCoord(obj.coords.a, obj.coords.e, obj.coords.d);
-
-        if (obj.description)
-            ret.description = obj.description;
-
 
         return ret;
     }
@@ -400,11 +389,12 @@ export class ADD {
     date: string;
     version: number;
     decoder: {
-        filter: Filter[],
+        name: string,
+        filters: Filter[],
         matrices: Matrix[],
         output: {
             channels: OutputChannel[],
-            matrix: number[][]
+            summing_matrix: number[][]
         }
     };
 
@@ -430,7 +420,7 @@ export class ADD {
 
 
 
-        this.decoder = { filter: [], matrices: [], output: { channels: [], matrix: [] } };
+        this.decoder = { name: "", filters: [], matrices: [], output: { channels: [], summing_matrix: [] } };
 
         if (add) {
 
@@ -443,8 +433,11 @@ export class ADD {
 
             if (pobj.decoder) {
 
-                if (pobj.decoder.filter)
-                    this.decoder.filter = pobj.decoder.filter.map(obj => Filter.fromObject(obj));
+                if(pobj.decoder.name)
+                    this.decoder.name = pobj.decoder.name;
+
+                if (pobj.decoder.filters)
+                    this.decoder.filters = pobj.decoder.filters.map(obj => Filter.fromObject(obj));
 
                 if (pobj.decoder.matrices)
                     this.decoder.matrices = pobj.decoder.matrices.map(mat => Matrix.fromObject(mat));
@@ -455,7 +448,7 @@ export class ADD {
 
                         this.decoder.output = {
                             channels: pobj.decoder.output.channels.map(channel => OutputChannel.fromObject(channel)),
-                            matrix: pobj.decoder.output.matrix || []
+                            summing_matrix: pobj.decoder.output.summing_matrix || []
                         }
                     }
                 }
@@ -486,19 +479,21 @@ export class ADD {
 
             decoder: {
 
-                filter: this.decoder.filter.map(flt => Filter.fromObject(flt)),
+                name: this.decoder.name,
+
+                filters: this.decoder.filters.map(flt => Filter.fromObject(flt)),
 
                 matrices: this.decoder.matrices.map(mat => {
                     return {
-                        normalisation: mat.normalisation,
-                        input: mat.input,
+                        normalization: mat.normalization,
+                        weights: mat.weights,
                         matrix: mat.matrix.map(chs => Array.from(chs))
                     }
                 }),
 
                 output: {
                     channels: this.decoder.output.channels.map(chan => OutputChannel.fromObject(chan)),
-                    matrix: this.decoder.output.matrix.map(chan => Array.from(chan))
+                    summing_matrix: this.decoder.output.summing_matrix.map(chan => Array.from(chan))
                 }
             },
 
@@ -525,6 +520,8 @@ export class ADD {
 
         this.version = this.version || 0;
 
+        this.decoder.name = this.decoder.name || this.name;
+
         if (!this.dateValid())
             this.date = new Date(Date.now()).toISOString();
     }
@@ -541,7 +538,7 @@ export class ADD {
 
             if(this.decoder.output.channels.length != this.totalMatrixOutputs()){
                 this.decoder.output.channels = [];
-                this.decoder.output.matrix = [];
+                this.decoder.output.summing_matrix = [];
                 this.createDefaultSummedOutputs();
             }
         }
@@ -581,7 +578,7 @@ export class ADD {
     }
 
     addFilter(flt: Filter): void {
-        this.decoder.filter.push(flt);
+        this.decoder.filters.push(flt);
     }
 
     addOutput(out: OutputChannel){
@@ -597,12 +594,12 @@ export class ADD {
 
         let channel_num = this.decoder.output.channels.length - 1;
 
-        this.decoder.output.matrix[channel_num] 
+        this.decoder.output.summing_matrix[channel_num] 
             = new Array(this.decoder.output.channels.length).fill(0);
 
-        this.decoder.output.matrix[channel_num][channel_num] = gain;
+        this.decoder.output.summing_matrix[channel_num][channel_num] = gain;
 
-        this.decoder.output.matrix.forEach(ch => {
+        this.decoder.output.summing_matrix.forEach(ch => {
             while(ch.length != this.decoder.output.channels.length)
                 ch.push(0);
         });
@@ -627,7 +624,7 @@ export class ADD {
 
     hasNoOutputs() {
         return this.decoder.output.channels.length == 0
-            || this.decoder.output.matrix.length == 0;
+            || this.decoder.output.summing_matrix.length == 0;
     }
 
     createDefaultOutputs(): void {
@@ -641,7 +638,7 @@ export class ADD {
                 let arr: number[] = new Array(this.totalMatrixOutputs()).fill(0);
                 arr[i + ((midx) ? this.decoder.matrices[midx - 1].numChannels() : 0)] = 1.0;
 
-                this.decoder.output.matrix.push(arr);
+                this.decoder.output.summing_matrix.push(arr);
             }
         });
     }
@@ -650,23 +647,23 @@ export class ADD {
 
         for (let i = 0; i < this.maxMatrixOutputCount(); ++i) {
             this.decoder.output.channels.push(new OutputChannel(`DEFAULT_${i}`, 'default'));
-            this.decoder.output.matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
+            this.decoder.output.summing_matrix[i] = new Array(this.totalMatrixOutputs()).fill(0);
         }
 
         this.decoder.matrices.forEach((mat, midx) => {
             for (let i = 0; i < mat.numChannels(); ++i)
-                this.decoder.output.matrix[i][(i + ((midx) ? this.decoder.matrices[midx - 1].numChannels() : 0))] = 1.0;
+                this.decoder.output.summing_matrix[i][(i + ((midx) ? this.decoder.matrices[midx - 1].numChannels() : 0))] = 1.0;
         });
     }
 
     createDefaultOutputMatrix(){
 
-        this.decoder.output.matrix.length = 0;
+        this.decoder.output.summing_matrix.length = 0;
 
         for(let i = 0; i < this.numOutputs(); ++i){
-            this.decoder.output.matrix.push(new Array(this.numOutputs()).fill(0));
-            this.decoder.output.matrix[this.decoder.output.matrix.length - 1]
-                                        [this.decoder.output.matrix.length - 1] = 1.;
+            this.decoder.output.summing_matrix.push(new Array(this.numOutputs()).fill(0));
+            this.decoder.output.summing_matrix[this.decoder.output.summing_matrix.length - 1]
+                                        [this.decoder.output.summing_matrix.length - 1] = 1.;
         }
 
     }
@@ -685,13 +682,13 @@ export class ADD {
 
     refitOutputMatrix(){
 
-        let ol = this.decoder.output.matrix.length;
+        let ol = this.decoder.output.summing_matrix.length;
 
         if(ol > this.numOutputs()){
 
-            this.decoder.output.matrix.length = this.numOutputs();
+            this.decoder.output.summing_matrix.length = this.numOutputs();
 
-            this.decoder.output.matrix
+            this.decoder.output.summing_matrix
                 .map(ch => { 
                     ch.length = this.numOutputs(); 
                     return ch; 
@@ -699,10 +696,10 @@ export class ADD {
 
         } else if(ol < this.numOutputs()) {
             
-            while(this.decoder.output.matrix.length != this.numOutputs())
-                this.decoder.output.matrix.push([]);
+            while(this.decoder.output.summing_matrix.length != this.numOutputs())
+                this.decoder.output.summing_matrix.push([]);
 
-            this.decoder.output.matrix.map((ch, i) => {
+            this.decoder.output.summing_matrix.map((ch, i) => {
 
                 let l = ch.length;
 
@@ -735,13 +732,13 @@ export class ADD {
             return this.invalidateWith('No outputs');
 
         if (!(this.decoder.output.channels.length
-            == this.decoder.output.matrix.length))
+            == this.decoder.output.summing_matrix.length))
             return this.invalidateWith('Output matrix dimensions do not match output channel count');
 
-        let inputs = this.decoder.output.matrix[0].length;
+        let inputs = this.decoder.output.summing_matrix[0].length;
         let valid = true;
 
-        let mixer_inputs = this.decoder.output.matrix.forEach(channel => {
+        let mixer_inputs = this.decoder.output.summing_matrix.forEach(channel => {
             if (channel.length != inputs)
                 valid = false;
         });
@@ -761,9 +758,12 @@ export class ADD {
         if(!this.decoder.matrices.length)
             return this.invalidateWith('No decoding matrices');
 
-        for (let i in this.decoder.filter) {
-            if(this.decoder.matrices.find(m => m.input == Number.parseInt(i)) == undefined)
-                return this.invalidateWith('Missing matrix for filter output ' + i);
+        if(this.decoder.filters.length){
+            if(this.decoder.matrices.length != this.decoder.filters.length)
+                return this.invalidateWith("Matrix count does not match Filter count");
+        } else {
+            if(this.decoder.matrices.length > 1)
+                return this.invalidateWith("No filters but more than 1 matrix");
         }
 
         for(let i in this.decoder.matrices){
