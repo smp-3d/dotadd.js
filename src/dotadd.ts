@@ -51,6 +51,7 @@ export class Filter {
     constructor(name: string, matrix: number, high: number, low?: number) {
 
         this.name = name;
+        this.matrix = matrix;
 
         if ((high == null) && (low == null))
             throw new Error('Cannot construct a Filterband without frequencies');
