@@ -56,22 +56,22 @@ export class Filter {
             throw new Error('Cannot construct a Filterband without frequencies');
 
         if (high != null)
-            this.hi = high;
+            this.high = high;
 
         if (low != null)
-            this.lo = low;
+            this.low = low;
     }
 
     isLowpass() {
-        return this.lo == null && this.hi != null;
+        return this.low == null && this.high != null;
     }
 
     isHighpass() {
-        return this.hi == null && this.lo != null;
+        return this.high == null && this.low != null;
     }
 
     isBandpass() {
-        return this.hi != null && this.lo != null;
+        return this.high != null && this.low != null;
     }
 
     static makeLowpass(name: string, matrix: number, freq: number){
@@ -88,8 +88,8 @@ export class Filter {
 
     name: string;
     matrix: number;
-    lo: number;
-    hi: number;
+    low: number;
+    high: number;
 }
 
 export const Normalization = Object.freeze({
