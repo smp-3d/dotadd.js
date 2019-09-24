@@ -222,23 +222,23 @@ export class Matrix {
     }
 
     /**
-     * Set the normalisation the matrix has. This will not change any values other than the 'normalisation' field
-     * @param normalisation the Normalisation type ('n3d' or 'sn3d')
+     * Set the normalization the matrix has. This will not change any values other than the 'normalization' field
+     * @param normalization the normalization type ('n3d' or 'sn3d')
      */
-    setNormalisation(normalisation: string): void {
-        this.normalization = normalisation.toLowerCase();
+    setNormalization(normalization: string): void {
+        this.normalization = normalization.toLowerCase();
     }
 
     /**
      * 
      */
-    getNormalisation(): string {
+    getNormalization(): string {
         return this.normalization;
     }
 
     /**
-     * change the normalisation of the matrix values
-     * @param normalisation the new normalisation type ('n3d' or 'sn3d')
+     * change the normalization of the matrix values
+     * @param normalization the new normalization type ('n3d' or 'sn3d')
      */
     renormalizeTo(normalization: string) {
 
