@@ -83,7 +83,7 @@ export class Filter {
     }
 
     static fromObject(obj: any) {
-        return new Filter(obj.name, obj.matrix, obj.hi, obj.lo);
+        return new Filter(obj.name, obj.matrix, obj.high, obj.low);
     }
 
     name: string;
