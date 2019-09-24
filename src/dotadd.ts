@@ -298,7 +298,7 @@ export class Matrix {
     }
 
     static fromObject(obj: any): Matrix {
-        return new Matrix(obj.input, obj.normalization);
+        return new Matrix(obj.normalization, obj.matrix);
     }
 }
 

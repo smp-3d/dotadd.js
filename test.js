@@ -2,7 +2,6 @@ const { ADD, Matrix, Filter } = require('./cjs/dotadd');
 
 let add = new ADD();
 
-
 add.setName("Test Decoder");
 
 add.addFilter(Filter.makeLowpass("lp", 0, 300));
