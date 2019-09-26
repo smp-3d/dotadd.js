@@ -298,7 +298,13 @@ export class Matrix {
     }
 
     static fromObject(obj: any): Matrix {
-        return new Matrix(obj.normalization, obj.matrix);
+
+        let mat = new Matrix(obj.normalization, obj.matrix);
+
+        if(obj.weights)
+            mat.setWeighting(obj.weights);
+
+        return mat;
     }
 }
 
