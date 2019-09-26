@@ -1,6 +1,4 @@
-# .ADD- Ambisonics Decoder Description
-
-## dotadd for JavaScript
+# dotadd for JavaScript
 
 This repository contains the integration of the .add-format functionalities for a JavaScript environment.
 Following is described what the possibilities are and how to use them.
@@ -67,8 +65,6 @@ To write .add to files use:
 
 ## Further information
 
-.ADD was developed by students of the [University of Applied Sciences Darmstadt](https://h-da.de/ "h_da - University of Applied Sciences")
+.ADD was developed by students of the [University of Applied Sciences Darmstadt](https://h-da.de/ "h_da - University of Applied Sciences Darmstadt")
 
 Feel free to contribute!
-
-**Authors:** *Gabriel Arlauskas*, *Jonas Ohland*, *Henning Schaar*
