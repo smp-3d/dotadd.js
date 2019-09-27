@@ -1,7 +1,6 @@
 # dotadd.js
 
-This repository contains the integration of the .add-format functionalities for a JavaScript environment.
-Following is described what the possibilities are and how to use them.
+This repository contains an implementation of the .add-format for JavaScript.
 
 ## Guide
 
