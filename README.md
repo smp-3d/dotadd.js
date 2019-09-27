@@ -33,14 +33,18 @@ You can also use `valid()` to check for completeness of a component or `add.repa
 
 To read .add from files use:
 
-```javascript
-()
+```js
+let add = new ADD(JSON.parse('data_here'));
 ```
 
 To write .add to files use:
 
-```javascript
-()
+```js
+let data = add.export().serialize();
+```
+or
+```js
+let data = JSON.stringify(add.export());
 ```
 
 ------
